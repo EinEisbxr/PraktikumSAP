@@ -15,20 +15,24 @@ class ToplevelWindow(ctk.CTkToplevel):
         super().__init__(*args, **kwargs)
         self.geometry("400x400")
         self.title("Settings")
-        self.configure(fg_color="#0e1718")
-        self.tk_setPalette(background='#ffffff', foreground='#0e1718',
-               activeBackground='#ffffff', activeForeground='#0e1718')
+        tkapp.detection_confidence = tk.StringVar(value="0.5") 
+        tkapp.tracking_confidence = tk.StringVar(value="0.5")
+        #self.configure(fg_color="#0e1718")
+        #self.tk_setPalette(background='#ffffff', foreground='#0e1718',
+        #       activeBackground='#ffffff', activeForeground='#0e1718')
+        self.create_widgets()
+        
         
     def create_widgets(self):
         Label_detection_confidence = ctk.CTkLabel(self, text="Detection Confidence")
-        Label_detection_confidence .pack()
+        Label_detection_confidence.pack(side=tk.TOP)
         Entry_detection_confidence = ctk.CTkEntry(self, textvariable=tkapp.detection_confidence)
-        Entry_detection_confidence.pack()
+        Entry_detection_confidence.pack(side=tk.TOP)
 
         Label_tracking_confidence = ctk.CTkLabel(self, text="Tracking Confidence")
-        Label_tracking_confidence.pack()
+        Label_tracking_confidence.pack(side=tk.TOP)
         Entry_tracking_confidence = ctk.CTkEntry(self, textvariable=tkapp.tracking_confidence)
-        Entry_tracking_confidence.pack()
+        Entry_tracking_confidence.pack(side=tk.TOP)
 
 class Window(ctk.CTk):
           
