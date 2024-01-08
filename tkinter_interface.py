@@ -14,7 +14,21 @@ class ToplevelWindow(ctk.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x400")
+        self.title("Settings")
+        self.configure(fg_color="#0e1718")
+        self.tk_setPalette(background='#ffffff', foreground='#0e1718',
+               activeBackground='#ffffff', activeForeground='#0e1718')
+        
+    def create_widgets(self):
+        Label_detection_confidence = ctk.CTkLabel(self, text="Detection Confidence")
+        Label_detection_confidence .pack()
+        Entry_detection_confidence = ctk.CTkEntry(self, textvariable=tkapp.detection_confidence)
+        Entry_detection_confidence.pack()
 
+        Label_tracking_confidence = ctk.CTkLabel(self, text="Tracking Confidence")
+        Label_tracking_confidence.pack()
+        Entry_tracking_confidence = ctk.CTkEntry(self, textvariable=tkapp.tracking_confidence)
+        Entry_tracking_confidence.pack()
 
 class Window(ctk.CTk):
           
