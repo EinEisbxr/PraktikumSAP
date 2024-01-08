@@ -41,9 +41,7 @@ while True:
 						0.9, (0, 255, 0), 2) 
 
 		# If any hand present 
-		else: 
-			pass
-			"""
+		else:
 			for i in results.multi_handedness: 
 				
 				# Return whether it is Right or Left Hand 
@@ -66,7 +64,7 @@ while True:
 					cv2.putText(img, label+' Hand', (460, 50), 
 								cv2.FONT_HERSHEY_COMPLEX, 
 								0.9, (0, 255, 0), 2) 
-"""
+					
 	# Display Video and when 'q' 
 	# is entered, destroy the window 
 	cv2.imshow('Image', img) 

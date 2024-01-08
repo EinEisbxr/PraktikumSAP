@@ -6,8 +6,76 @@ import threading
 import requests
 import os
 import time
+import cv2
+import mediapipe as mp
+from google.protobuf.json_format import MessageToDict
 
 global tkapp
+
+
+class HandTracking():
+    def __init__(self) -> None:
+        self.cap = cv2.VideoCapture(0)
+
+        # Initializing the Model 
+        mpHands = mp.solutions.hands 
+        self.hands = mpHands.Hands( 
+            static_image_mode=False, 
+            model_complexity=1,
+            min_detection_confidence=0.75, 
+            min_tracking_confidence=0.75, 
+            max_num_hands=2) 
+        
+    def process_video(self):
+        ret, frame = self.cap.read()
+
+        if ret:
+            frame = cv2.flip(frame, 1)
+            frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = self.hands.process(frameRGB)
+
+            # If hands are present in image(frame) 
+            if results.multi_hand_landmarks: 
+
+                # Both Hands are present in image(frame) 
+                if len(results.multi_handedness) == 2: 
+                        # Display 'Both Hands' on the image 
+                    cv2.putText(frame, 'Both Hands', (250, 50), 
+                                cv2.FONT_HERSHEY_COMPLEX, 
+                                0.9, (0, 255, 0), 2) 
+                    
+            # If any hand present 
+            else:
+                for i in results.multi_handedness: 
+                    
+                    # Return whether it is Right or Left Hand 
+                    label = MessageToDict(i) 
+                    ['classification'][0]['label'] 
+
+                    if label == 'Left': 
+                        
+                        # Display 'Left Hand' on 
+                        # left side of window 
+                        cv2.putText(frame, label+' Hand', 
+                                    (20, 50), 
+                                    cv2.FONT_HERSHEY_COMPLEX, 
+                                    0.9, (0, 255, 0), 2) 
+
+                    if label == 'Right': 
+                        
+                        # Display 'Left Hand' 
+                        # on left side of window 
+                        cv2.putText(frame, label+' Hand', (460, 50), 
+                                    cv2.FONT_HERSHEY_COMPLEX, 
+                                    0.9, (0, 255, 0), 2) 
+                        
+            return frame
+
+        else:
+            print("Error while reading frame")    
+            
+
 
 
 class ToplevelWindow(ctk.CTkToplevel):
@@ -34,8 +102,7 @@ class ToplevelWindow(ctk.CTkToplevel):
         Entry_tracking_confidence = ctk.CTkEntry(self, textvariable=tkapp.tracking_confidence)
         Entry_tracking_confidence.pack(side=tk.TOP)
 
-class Window(ctk.CTk):
-          
+class Window(ctk.CTk):  
     def __init__(self):
         super().__init__()
         self.settings_window = None
@@ -71,7 +138,7 @@ class Window(ctk.CTk):
         menu.add_cascade(label="File", menu=file_menu, foreground="#ffffff", background="#3D3D3D")
         file_menu.add_command(label="Settings", command=self.create_settings_window, foreground="#ffffff", background="#3D3D3D")
         file_menu.add_command(label="Exit", command=self.destroy, foreground="#ffffff", background="#3D3D3D")
-       
+        
         
         self.configure(menu=menu)
 
