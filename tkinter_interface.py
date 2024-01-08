@@ -34,7 +34,7 @@ class HandTracking():
     def process_video(self):
         #frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
         #load frames from file
-        frame = cv2.imread("test.jpeg")
+        frame = cv2.imread("test3.jpeg")
         frame = cv2.resize(frame, (600, 600))
         ret = True
 
@@ -103,7 +103,7 @@ class HandTracking():
 
 
 class ToplevelWindow(ctk.CTkToplevel):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, tkapp, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x400")
         self.title("Settings")
@@ -112,19 +112,26 @@ class ToplevelWindow(ctk.CTkToplevel):
         #self.configure(fg_color="#0e1718")
         #self.tk_setPalette(background='#ffffff', foreground='#0e1718',
         #       activeBackground='#ffffff', activeForeground='#0e1718')
+        self.tkapp = tkapp
         self.create_widgets()
         
         
     def create_widgets(self):
         Label_detection_confidence = ctk.CTkLabel(self, text="Detection Confidence")
         Label_detection_confidence.pack(side=tk.TOP)
-        Entry_detection_confidence = ctk.CTkEntry(self, textvariable=tkapp.detection_confidence)
+        Entry_detection_confidence = ctk.CTkEntry(self, textvariable=self.tkapp.detection_confidence)
         Entry_detection_confidence.pack(side=tk.TOP)
 
         Label_tracking_confidence = ctk.CTkLabel(self, text="Tracking Confidence")
         Label_tracking_confidence.pack(side=tk.TOP)
-        Entry_tracking_confidence = ctk.CTkEntry(self, textvariable=tkapp.tracking_confidence)
+        Entry_tracking_confidence = ctk.CTkEntry(self, textvariable=self.tkapp.tracking_confidence)
         Entry_tracking_confidence.pack(side=tk.TOP)
+        
+        Button_apply = ctk.CTkButton(self, text="Apply", command=self.apply_settings)
+        Button_apply.pack(side=tk.TOP)
+        
+    def apply_settings(self):
+        print("Apply settings")
 
 class Window(ctk.CTk):  
     def __init__(self):
