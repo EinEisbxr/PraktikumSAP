@@ -6,6 +6,7 @@ import threading
 import requests
 import os
 import time
+
 global tkapp
 
 class Window(ctk.CTk):
@@ -14,8 +15,8 @@ class Window(ctk.CTk):
         super().__init__()
         self.settings_window = None
 
-        self.screenheight = 720 #self.winfo_screenheight()
-        self.screenwidth = 1280 #self.winfo_screenwidth()
+        self.screenheight = self.winfo_screenheight()
+        self.screenwidth = self.winfo_screenwidth()
         
         # Set window title
         self.title("Hand Tracking App")
@@ -31,17 +32,15 @@ class Window(ctk.CTk):
     # create settings window when settings button was pressed 
     def create_settings_window(self):
         if self.settings_window == None:
-            self.settings_window = ctk.CTk()
-            self.settings_window.bind("<Destroy>", self.on_settings_window_destroy)
+            self.settings_window = ctk.CTkToplevel(self)
             
             #Configure settings window
             self.settings_window.title("Settings")
             self.settings_window.geometry("400x400")
-            self.settings_window.configure(fg_color="#ffffff")
-            self.settings_window.tk_setPalette(background='#ffffff', foreground='#0e1718',
-               activeBackground='#ffffff', activeForeground='#ffffff')
+            self.settings_window.configure(fg_color="#0e1718")
+            self.settings_window.tk_setPalette(background='#0e1718', foreground='#0e1718',
+               activeBackground='#0e1718', activeForeground='#0e1718')
             
-                        
             
             self.settings_window.mainloop()
             
@@ -56,8 +55,8 @@ class Window(ctk.CTk):
         menu = tk.Menu(self)
         
         file_menu = tk.Menu(self)
-        menu.add_cascade(label="File", menu=settings_menu)
-        
+        menu.add_cascade(label="Settings", menu=file_menu, command=self.create_settings_window)
+       
         
         self.configure(menu=menu)
 
