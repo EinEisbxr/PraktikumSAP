@@ -9,6 +9,13 @@ import time
 
 global tkapp
 
+
+class ToplevelWindow(ctk.CTkToplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("400x400")
+
+
 class Window(ctk.CTk):
           
     def __init__(self):
@@ -31,17 +38,10 @@ class Window(ctk.CTk):
         
     # create settings window when settings button was pressed 
     def create_settings_window(self):
-        self.settings_window = ctk.CTkToplevel(self)
-        
-        #Configure settings window
-        self.settings_window.title("Settings")
-        self.settings_window.geometry("400x400")
-        self.settings_window.configure(fg_color="#0e1718")
-        self.settings_window.tk_setPalette(background='#0e1718', foreground='#0e1718',
-            activeBackground='#0e1718', activeForeground='#0e1718')
-        
-        
-        self.settings_window.mainloop()
+        if self.toplevel_window is None or not self.toplevel_window.winfo_exists():
+            self.toplevel_window = ToplevelWindow(self)  # create window if its None or destroyed
+        else:
+            self.toplevel_window.focus()  # if window exists focus it
 
             
     def create_navigation_bar(self):
