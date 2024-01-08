@@ -54,8 +54,10 @@ class Window(ctk.CTk):
     def create_navigation_bar(self):
         menu = tk.Menu(self)
         
-        file_menu = tk.Menu(self)
-        menu.add_cascade(label="Settings", menu=file_menu, command=self.create_settings_window)
+        file_menu = tk.Menu()
+        menu.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Settings", command=self.create_settings_window)
+        file_menu.add_command(label="Exit", command=self.destroy)
        
         
         self.configure(menu=menu)
