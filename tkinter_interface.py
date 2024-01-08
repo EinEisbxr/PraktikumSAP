@@ -9,6 +9,8 @@ import time
 import cv2
 import mediapipe as mp
 from google.protobuf.json_format import MessageToDict
+import numpy as np
+from PIL import Image, ImageTk
 
 global tkapp
 
@@ -122,6 +124,7 @@ class Window(ctk.CTk):
                activeBackground='#3D3D3D', activeForeground='#ffffff')
         
         self.create_navigation_bar()
+        self.fake_video()   
         
     # create settings window when settings button was pressed 
     def create_settings_window(self):
@@ -141,8 +144,24 @@ class Window(ctk.CTk):
         
         
         self.configure(menu=menu)
+        
+    def fake_video(self):
+        
+        image_label = ctk.CTkLabel(self, text="", width=1000, height=1000, bg_color="#ffffff")
+        image_label.pack(side=tk.TOP)
+        
+        while True:
+            time.sleep(1)
+            frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
 
+            #Update the image to tkinter...
+            frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+            img_update = ImageTk.PhotoImage(Image.fromarray(frame))
+            image_label.configure(image=img_update)
+            image_label.image=img_update
+            image_label.update()
 
+        
 tkapp = Window()
 
 
