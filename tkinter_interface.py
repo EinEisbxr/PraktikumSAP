@@ -24,6 +24,8 @@ class Window(ctk.CTk):
 
         self.screenheight = self.winfo_screenheight()
         self.screenwidth = self.winfo_screenwidth()
+
+        self.toplevel_window = None
         
         # Set window title
         self.title("Hand Tracking App")
