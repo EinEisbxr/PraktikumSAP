@@ -17,11 +17,14 @@ global tkapp
 
 class HandTracking():
     def __init__(self) -> None:
-        self.cap = cv2.VideoCapture(0)
+        #self.cap = cv2.VideoCapture(0)
+        
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_drawing_styles = mp.solutions.drawing_styles
 
         # Initializing the Model 
-        mpHands = mp.solutions.hands 
-        self.hands = mpHands.Hands( 
+        self.mpHands = mp.solutions.hands 
+        self.hands = self.mpHands.Hands( 
             static_image_mode=False, 
             model_complexity=1,
             min_detection_confidence=0.75, 
@@ -29,13 +32,21 @@ class HandTracking():
             max_num_hands=2) 
         
     def process_video(self):
-        ret, frame = self.cap.read()
+        #frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
+        #load frames from file
+        frame = cv2.imread("test.jpeg")
+        frame = cv2.resize(frame, (600, 600))
+        ret = True
 
         if ret:
-            frame = cv2.flip(frame, 1)
-            frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            #frame = cv2.flip(frame, 1)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frameRGB = frame
 
             results = self.hands.process(frameRGB)
+            print(results)
+            
+
 
             # If hands are present in image(frame) 
             if results.multi_hand_landmarks: 
@@ -46,31 +57,42 @@ class HandTracking():
                     cv2.putText(frame, 'Both Hands', (250, 50), 
                                 cv2.FONT_HERSHEY_COMPLEX, 
                                 0.9, (0, 255, 0), 2) 
-                    
-            # If any hand present 
-            else:
-                for i in results.multi_handedness: 
-                    
-                    # Return whether it is Right or Left Hand 
-                    label = MessageToDict(i) 
-                    ['classification'][0]['label'] 
-
-                    if label == 'Left': 
+                
+                # If any hand present 
+                else:
+                    for i in results.multi_handedness: 
                         
-                        # Display 'Left Hand' on 
-                        # left side of window 
-                        cv2.putText(frame, label+' Hand', 
-                                    (20, 50), 
-                                    cv2.FONT_HERSHEY_COMPLEX, 
-                                    0.9, (0, 255, 0), 2) 
-
-                    if label == 'Right': 
+                        # Return whether it is Right or Left Hand 
+                        label = MessageToDict(i)['classification'][0]['label'] 
                         
-                        # Display 'Left Hand' 
-                        # on left side of window 
-                        cv2.putText(frame, label+' Hand', (460, 50), 
-                                    cv2.FONT_HERSHEY_COMPLEX, 
-                                    0.9, (0, 255, 0), 2) 
+                        if label == 'Left':
+                            label = 'Right'
+                        elif label == 'Right':
+                            label = 'Left'
+
+                        if label == 'Left': 
+                            
+                            # Display 'Left Hand' on 
+                            # left side of window 
+                            cv2.putText(frame, label+' Hand', 
+                                        (20, 50), 
+                                        cv2.FONT_HERSHEY_COMPLEX, 
+                                        0.9, (0, 255, 0), 2) 
+
+                        if label == 'Right': 
+                            
+                            # Display 'Left Hand' 
+                            # on left side of window 
+                            cv2.putText(frame, label+' Hand', (460, 50), 
+                                        cv2.FONT_HERSHEY_COMPLEX, 
+                                        0.9, (0, 255, 0), 2)
+                            
+                for hand_landmarks in results.multi_hand_landmarks:
+                    self.mp_drawing.draw_landmarks(
+                        frame, hand_landmarks, self.mpHands.HAND_CONNECTIONS,
+                        self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                        self.mp_drawing_styles.get_default_hand_connections_style()) 
+        
                         
             return frame
 
@@ -149,17 +171,19 @@ class Window(ctk.CTk):
         
         image_label = ctk.CTkLabel(self, text="", width=1000, height=1000, bg_color="#ffffff")
         image_label.pack(side=tk.TOP)
+        HandTracker = HandTracking()
         
         while True:
-            time.sleep(1)
-            frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
+            StartT = time.time()
+            time.sleep(0.03)
+            frame = HandTracker.process_video()
 
             #Update the image to tkinter...
-            frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
             img_update = ImageTk.PhotoImage(Image.fromarray(frame))
             image_label.configure(image=img_update)
             image_label.image=img_update
             image_label.update()
+            self.fps = 1/(time.time()-StartT)
 
         
 tkapp = Window()
