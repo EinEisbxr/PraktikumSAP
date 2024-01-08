@@ -30,11 +30,11 @@ class Window(ctk.CTk):
         # Set window title
         self.title("Hand Tracking App")
         self.after(0, lambda:self.state('normal'))
-        self.configure(fg_color="#0e1718")
+        self.configure(fg_color="#0e1718", bg_color="#3D3D3D")
         self.geometry(f"{self.screenwidth}x{self.screenheight}")
         
-        self.tk_setPalette(background='#ffffff', foreground='#0e1718',
-               activeBackground='#ffffff', activeForeground='#0e1718')
+        self.tk_setPalette(background='#3D3D3D', foreground='#ffffff',
+               activeBackground='#3D3D3D', activeForeground='#ffffff')
         
         self.create_navigation_bar()
         
@@ -50,9 +50,9 @@ class Window(ctk.CTk):
         menu = tk.Menu(self)
         
         file_menu = tk.Menu()
-        menu.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Settings", command=self.create_settings_window)
-        file_menu.add_command(label="Exit", command=self.destroy)
+        menu.add_cascade(label="File", menu=file_menu, foreground="#ffffff", background="#3D3D3D")
+        file_menu.add_command(label="Settings", command=self.create_settings_window, foreground="#ffffff", background="#3D3D3D")
+        file_menu.add_command(label="Exit", command=self.destroy, foreground="#ffffff", background="#3D3D3D")
        
         
         self.configure(menu=menu)
