@@ -12,12 +12,13 @@ from google.protobuf.json_format import MessageToDict
 import numpy as np
 from PIL import Image, ImageTk
 
+
 global tkapp
 
 
 class HandTracking():
     def __init__(self) -> None:
-        #self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
         
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
@@ -34,9 +35,10 @@ class HandTracking():
     def process_video(self):
         #frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
         #load frames from file
-        frame = cv2.imread("test3.jpeg")
-        frame = cv2.resize(frame, (600, 600))
-        ret = True
+        #frame = cv2.imread("test3.jpeg")
+        #frame = cv2.resize(frame, (600, 600))
+        #ret = True
+        ret, frame = self.cap.read()
 
         if ret:
             #frame = cv2.flip(frame, 1)
@@ -44,9 +46,6 @@ class HandTracking():
             frameRGB = frame
 
             results = self.hands.process(frameRGB)
-            print(results)
-            
-
 
             # If hands are present in image(frame) 
             if results.multi_hand_landmarks: 
@@ -107,13 +106,17 @@ class ToplevelWindow(ctk.CTkToplevel):
         super().__init__(*args, **kwargs)
         self.geometry("400x400")
         self.title("Settings")
-        tkapp.detection_confidence = tk.StringVar(value="0.5") 
-        tkapp.tracking_confidence = tk.StringVar(value="0.5")
+        tkapp.detection_confidence = tk.StringVar(value="0.75") 
+        tkapp.tracking_confidence = tk.StringVar(value="0.75")
+        tkapp.max_num_hands = tk.StringVar(value="2")
+        tkapp.model_complexity = tk.StringVar(value="1")
+        
         #self.configure(fg_color="#0e1718")
         #self.tk_setPalette(background='#ffffff', foreground='#0e1718',
         #       activeBackground='#ffffff', activeForeground='#0e1718')
         self.tkapp = tkapp
         self.create_widgets()
+        
         
         
     def create_widgets(self):
@@ -127,11 +130,28 @@ class ToplevelWindow(ctk.CTkToplevel):
         Entry_tracking_confidence = ctk.CTkEntry(self, textvariable=self.tkapp.tracking_confidence)
         Entry_tracking_confidence.pack(side=tk.TOP)
         
+        Label_max_num_hands = ctk.CTkLabel(self, text="Max Number of Hands")
+        Label_max_num_hands.pack(side=tk.TOP)
+        Entry_max_num_hands = ctk.CTkEntry(self, textvariable=self.tkapp.max_num_hands)
+        Entry_max_num_hands.pack(side=tk.TOP)
+        
+        Label_model_complexity = ctk.CTkLabel(self, text="Model Complexity")
+        Label_model_complexity.pack(side=tk.TOP)
+        Entry_model_complexity = ctk.CTkEntry(self, textvariable=self.tkapp.model_complexity)
+        Entry_model_complexity.pack(side=tk.TOP)
+        
+        self.bind("<Return>", lambda event: self.apply_settings())
+        
         Button_apply = ctk.CTkButton(self, text="Apply", command=self.apply_settings)
         Button_apply.pack(side=tk.TOP)
         
     def apply_settings(self):
-        print("Apply settings")
+        self.tkapp.HandTracker.hands = self.tkapp.HandTracker.mpHands.Hands( 
+            static_image_mode=False, 
+            model_complexity=int(self.tkapp.model_complexity.get()),
+            min_detection_confidence=float(self.tkapp.detection_confidence.get()), 
+            min_tracking_confidence=float(self.tkapp.tracking_confidence.get()),
+            max_num_hands=int(self.tkapp.max_num_hands.get()))
 
 class Window(ctk.CTk):  
     def __init__(self):
@@ -145,7 +165,7 @@ class Window(ctk.CTk):
         
         # Set window title
         self.title("Hand Tracking App")
-        self.after(0, lambda:self.state('normal'))
+        self.after(0, lambda:self.state('zoomed'))
         self.configure(fg_color="#0e1718", bg_color="#3D3D3D")
         self.geometry(f"{self.screenwidth}x{self.screenheight}")
         
@@ -159,6 +179,7 @@ class Window(ctk.CTk):
     def create_settings_window(self):
         if self.toplevel_window is None or not self.toplevel_window.winfo_exists():
             self.toplevel_window = ToplevelWindow(self)  # create window if its None or destroyed
+            self.toplevel_window.lift()
         else:
             self.toplevel_window.focus()  # if window exists focus it
 
@@ -178,19 +199,19 @@ class Window(ctk.CTk):
         
         image_label = ctk.CTkLabel(self, text="", width=1000, height=1000, bg_color="#ffffff")
         image_label.pack(side=tk.TOP)
-        HandTracker = HandTracking()
+        self.HandTracker = HandTracking()
         
         while True:
-            StartT = time.time()
-            time.sleep(0.03)
-            frame = HandTracker.process_video()
+            #StartT = time.time()
+            #time.sleep(0.03)
+            frame = self.HandTracker.process_video()
 
             #Update the image to tkinter...
             img_update = ImageTk.PhotoImage(Image.fromarray(frame))
             image_label.configure(image=img_update)
             image_label.image=img_update
             image_label.update()
-            self.fps = 1/(time.time()-StartT)
+            #self.fps = 1/(time.time()-StartT)
 
         
 tkapp = Window()
