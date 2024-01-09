@@ -17,7 +17,7 @@ global tkapp
 
 class HandTracking():
     def __init__(self, tkapp) -> None:
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
         
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
@@ -39,7 +39,7 @@ class HandTracking():
         #frame = cv2.imread("test3.jpeg")
         #ret = True
         ret, frame = self.cap.read()
-        frame = cv2.resize(frame, (1280, 720))
+        frame = cv2.resize(frame, (self.tkapp.video_feed_width, self.tkapp.video_feed_height))
         
         #flip the frame
         frame = cv2.flip(frame, 1)
@@ -49,43 +49,44 @@ class HandTracking():
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frameRGB = frame
 
-            cv2.putText(frame, f"FPS: {self.tkapp.fps:.2f}", (600, 360), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+            cv2.putText(frame, f"FPS: {self.tkapp.fps:.2f}", (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height-50)), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
 
 
             results = self.hands.process(frameRGB)
 
             # If hands are present in image(frame) 
             if results.multi_hand_landmarks: 
-                for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
-                    coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
-                    coordinates7 = (hand_landmarks.landmark[7].x, hand_landmarks.landmark[7].y)
-                    coordinates8 = (hand_landmarks.landmark[8].x, hand_landmarks.landmark[8].y)
-                    #print(coordinates7, coordinates8)
+                if self.tkapp.laser_pointer.get():
+                    for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
+                        coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
+                        coordinates7 = (hand_landmarks.landmark[7].x, hand_landmarks.landmark[7].y)
+                        coordinates8 = (hand_landmarks.landmark[8].x, hand_landmarks.landmark[8].y)
+                        #print(coordinates7, coordinates8)
 
-                    # Calculate slopes
-                    slope1 = (coordinates7[1] - coordinates6[1]) / (coordinates7[0] - coordinates6[0]) if coordinates7[0] != coordinates6[0] else float('inf')
-                    slope2 = (coordinates8[1] - coordinates7[1]) / (coordinates8[0] - coordinates7[0]) if coordinates8[0] != coordinates7[0] else float('inf')
+                        # Calculate slopes
+                        slope1 = (coordinates7[1] - coordinates6[1]) / (coordinates7[0] - coordinates6[0]) if coordinates7[0] != coordinates6[0] else float('inf')
+                        slope2 = (coordinates8[1] - coordinates7[1]) / (coordinates8[0] - coordinates7[0]) if coordinates8[0] != coordinates7[0] else float('inf')
 
-                    if abs(slope1 - slope2) < 0.5:
-                        # Calculate the direction of the line from coordinates7 to coordinates8
-                        direction = (coordinates8[0] - coordinates7[0], coordinates8[1] - coordinates7[1])
+                        if abs(slope1 - slope2) < 0.5:
+                            # Calculate the direction of the line from coordinates7 to coordinates8
+                            direction = (coordinates8[0] - coordinates7[0], coordinates8[1] - coordinates7[1])
 
-                        # Normalize the direction
-                        length = (direction[0]**2 + direction[1]**2)**0.5
-                        direction = (direction[0]/length, direction[1]/length)
+                            # Normalize the direction
+                            length = (direction[0]**2 + direction[1]**2)**0.5
+                            direction = (direction[0]/length, direction[1]/length)
 
-                        # Calculate the point on the border of the screen
-                        # Assuming the screen size is (1280, screen_height)
-                        border_point = (int(coordinates7[0]*1280 + direction[0]*1280), int(coordinates7[1]*720 + direction[1]*720))
+                            # Calculate the point on the border of the screen
+                            # Assuming the screen size is (self.tkapp.video_feed_width, screen_height)
+                            border_point = (int(coordinates7[0]*self.tkapp.video_feed_width + direction[0]*self.tkapp.video_feed_width), int(coordinates7[1]*self.tkapp.video_feed_height + direction[1]*self.tkapp.video_feed_height))
 
-                        # Draw the line from coordinates7 to coordinates8
-                        cv2.line(frame, (int(coordinates7[0]*1280), int(coordinates7[1]*720)), (int(coordinates8[0]*1280), int(coordinates8[1]*720)), (0, 255, 0), 10)
+                            # Draw the line from coordinates7 to coordinates8
+                            cv2.line(frame, (int(coordinates7[0]*self.tkapp.video_feed_width), int(coordinates7[1]*self.tkapp.video_feed_height)), (int(coordinates8[0]*self.tkapp.video_feed_width), int(coordinates8[1]*self.tkapp.video_feed_height)), (0, 255, 0), 10)
 
-                        # Draw the line from coordinates8 to the border of the screen
-                        cv2.line(frame, (int(coordinates8[0]*1280), int(coordinates8[1]*720)), border_point, (0, 255, 0), 10)
+                            # Draw the line from coordinates8 to the border of the screen
+                            cv2.line(frame, (int(coordinates8[0]*self.tkapp.video_feed_width), int(coordinates8[1]*self.tkapp.video_feed_height)), border_point, (0, 255, 0), 10)
                         
                     
-
+                """
                 # Both Hands are present in image(frame) 
                 if len(results.multi_handedness) == 2: 
                         # Display 'Both Hands' on the image 
@@ -118,7 +119,8 @@ class HandTracking():
                                         cv2.FONT_HERSHEY_COMPLEX, 
                                         0.9, (0, 255, 0), 2)
                       
-                print(self.tkapp.skeleton_mode.get())            
+                """
+                #print(self.tkapp.skeleton_mode.get())            
                 if self.tkapp.skeleton_mode.get():
                     for hand_landmarks in results.multi_hand_landmarks:
                         self.mp_drawing.draw_landmarks(
@@ -132,7 +134,6 @@ class HandTracking():
         else:
             print("Error while reading frame")    
             
-
 
 
 class ToplevelWindow(ctk.CTkToplevel):
@@ -170,10 +171,20 @@ class ToplevelWindow(ctk.CTkToplevel):
         Entry_model_complexity = ctk.CTkEntry(self, textvariable=self.tkapp.model_complexity)
         Entry_model_complexity.pack(side=tk.TOP)
         
+        Label_cam_number = ctk.CTkLabel(self, text="Camera Number")
+        Label_cam_number.pack(side=tk.TOP)
+        Entry_cam_number = ctk.CTkEntry(self, textvariable=self.tkapp.cam_number)
+        Entry_cam_number.pack(side=tk.TOP)  
+        
         Label_skeleton_mode = ctk.CTkLabel(self, text="Toggle the skeleton mode")
         Label_skeleton_mode.pack(side=tk.TOP)
         Checkbox_skeleton_mode = ctk.CTkCheckBox(self, variable=self.tkapp.skeleton_mode)
         Checkbox_skeleton_mode.pack(side=tk.TOP)
+        
+        Label_laser_pointer = ctk.CTkLabel(self, text="Toggle the laser pointer")
+        Label_laser_pointer.pack(side=tk.TOP)
+        Checkbox_laser_pointer = ctk.CTkCheckBox(self, variable=self.tkapp.laser_pointer)
+        Checkbox_laser_pointer.pack(side=tk.TOP)
         
         self.bind("<Return>", lambda event: self.apply_settings())
         
@@ -189,15 +200,16 @@ class ToplevelWindow(ctk.CTkToplevel):
             max_num_hands=int(self.tkapp.max_num_hands.get()))
         
         save_settigs = """
-        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, laser_pointer)
+        VALUES (?, ?, ?, ?, ?, ?)
         """
         
         self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
                                             self.tkapp.tracking_confidence.get(),
                                             self.tkapp.max_num_hands.get(),
                                             self.tkapp.model_complexity.get(),
-                                            self.tkapp.skeleton_mode.get()))
+                                            self.tkapp.skeleton_mode.get(),
+                                            self.tkapp.laser_pointer.get()))
         
         self.tkapp.conn.commit()
 
@@ -212,6 +224,14 @@ class Window(ctk.CTk):
         self.toplevel_window = None
         self.fps = -1
         self.skeleton_mode = False
+        self.laser_pointer = False
+        self.running = True
+        
+        self.video_feed_width = 640
+        self.video_feed_height = 360
+        
+        self.tkinter_width = 640
+        self.tkinter_height = 360
         
         # Set window title
         self.title("Hand Tracking App")
@@ -221,6 +241,8 @@ class Window(ctk.CTk):
         
         self.tk_setPalette(background='#3D3D3D', foreground='#ffffff',
                activeBackground='#3D3D3D', activeForeground='#ffffff')
+        
+        self.bind("<Destroy>", lambda event: self.close_application())
         
         self.create_navigation_bar()
         
@@ -233,11 +255,13 @@ class Window(ctk.CTk):
     def load_settings(self):
         self.c.execute("SELECT * FROM settings ORDER BY id DESC LIMIT 1")
         settings = self.c.fetchone()
+        
         self.detection_confidence = tk.StringVar(value="0.75") 
         self.tracking_confidence = tk.StringVar(value="0.75")
         self.max_num_hands = tk.StringVar(value="2")
         self.model_complexity = tk.StringVar(value="1")
         self.skeleton_mode = tk.BooleanVar(value=False)
+        self.laser_pointer = tk.BooleanVar(value=False)
         
         if settings is not None:
             self.detection_confidence.set(settings[1])
@@ -245,6 +269,7 @@ class Window(ctk.CTk):
             self.max_num_hands.set(settings[3])
             self.model_complexity.set(settings[4])
             self.skeleton_mode.set(settings[5])
+            self.laser_pointer.set(settings[6])
         
     # create settings window when settings button was pressed 
     def create_settings_window(self):
@@ -268,14 +293,14 @@ class Window(ctk.CTk):
         
     def video_feed(self):
         
-        image_label = ctk.CTkLabel(self, text="", width=1280, height=720, bg_color="#ffffff")
-        empty_image = Image.new('RGB', (1280, 720))
-        ctkimage = ctk.CTkImage(empty_image, empty_image, size=(1280, 720))
+        image_label = ctk.CTkLabel(self, text="", width=self.tkinter_width, height=self.tkinter_height, bg_color="#ffffff")
+        #empty_image = Image.new('RGB', (self.tkinter_width, self.tkinter_height))
+        #ctkimage = ctk.CTkImage(empty_image, empty_image, size=(self.tkinter_width, self.tkinter_height))
         image_label.pack(side=tk.TOP)
         
         self.HandTracker = HandTracking(self)
         
-        while True:
+        while self.running:
             StartT = time.time()
             #time.sleep(0.03)
             frame = self.HandTracker.process_video()
@@ -284,20 +309,31 @@ class Window(ctk.CTk):
             try:
                 img_update = Image.fromarray(frame, 'RGB')
                 
-                ctkimage.configure(light_image=img_update, dark_image=img_update)
-                    
+                img_update = img_update.resize((self.tkinter_width, self.tkinter_height), Image.ANTIALIAS)
+                
+                ctkimage = ImageTk.PhotoImage(img_update)
+                
+    
                 image_label.configure(image=ctkimage)
                 image_label.update()
                 
                 self.fps = 1/(time.time()-StartT)
                 
             except RuntimeError:
-                print("Window was closed: RuntimeError")
-                os._exit(0)  
+                print("Window was closed: RuntimeError") 
+                self.close_application()
             
             except AttributeError:
                 print("Window was closed: AttributeError")
-                os._exit(0)
+                self.close_application()
+
+                
+    
+    def close_application(self):
+        self.running = False
+        self.conn.close()
+        os._exit(0)
+        
                         
     def init_sqlite_db(self):
         self.conn = sqlite3.connect('settings.db')
@@ -308,7 +344,8 @@ class Window(ctk.CTk):
                         tracking_confidence TEXT DEFAULT 0.75,
                         max_num_hands TEXT DEFAULT 2,
                         model_complexity TEXT DEFAULT 0,
-                        skeleton_mode BOOLEAN DEFAULT FALSE
+                        skeleton_mode BOOLEAN DEFAULT FALSE,
+                        laser_pointer BOOLEAN DEFAULT FALSE
                         )""")
         self.conn.commit()
 
