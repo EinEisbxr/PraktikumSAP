@@ -5,11 +5,14 @@ import customtkinter as ctk
 import time
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 from google.protobuf.json_format import MessageToDict
 import numpy as np
 from PIL import Image, ImageTk
 import os
 import sqlite3
+import keyboard
 
 
 global tkapp
@@ -17,10 +20,16 @@ global tkapp
 
 class HandTracking():
     def __init__(self, tkapp) -> None:
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(int(tkapp.cam_number.get()))
         
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
+        
+        VisionRunningMode = mp.tasks.vision.RunningMode
+                
+        self.base_options = python.BaseOptions(model_asset_path=r'C:\Users\Felix\OneDrive - Helmholtz-Gymnasium\Desktop\Github\PraktikumSAP\gesture_recognizer.task')
+        self.options = vision.GestureRecognizerOptions(base_options=self.base_options, running_mode=VisionRunningMode.VIDEO)
+        self.recognizer = vision.GestureRecognizer.create_from_options(self.options)
 
         # Initializing the Model 
         self.mpHands = mp.solutions.hands   
@@ -32,6 +41,7 @@ class HandTracking():
             max_num_hands=int(tkapp.max_num_hands.get()))
         
         self.tkapp = tkapp
+        self.Timeout_Thumb_Up = 0
         
     def process_video(self):
         #frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
@@ -46,6 +56,8 @@ class HandTracking():
 
         if ret:
             #frame = cv2.flip(frame, 1)
+
+            
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frameRGB = frame
 
@@ -56,6 +68,33 @@ class HandTracking():
 
             # If hands are present in image(frame) 
             if results.multi_hand_landmarks: 
+                            
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+                
+                self.frame_timestamp_ms = int(round(time.time() * 1000))
+                
+                gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
+                
+                if gesture_recognition_result is not None:
+                    #GestureRecognizerResult(gestures=[[Category(index=-1, score=0.552459716796875, display_name='', category_name='Open_Palm')]] get category name
+                    if len(gesture_recognition_result.gestures) > 0:
+                        if gesture_recognition_result.gestures[0][0].category_name != None and gesture_recognition_result.gestures[0][0].category_name != "" and gesture_recognition_result.gestures[0][0].category_name != "None":
+                            cv2.putText(frame, f"Gesture: {gesture_recognition_result.gestures[0][0].category_name}", (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height-100)), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+                        print(gesture_recognition_result.gestures[0][0].category_name)
+
+                        if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Up" and self.Timeout_Thumb_Up < time.time():
+                            keyboard.write("👍")
+                            keyboard.press_and_release('enter')
+                            self.Timeout_Thumb_Up = time.time() + 1
+                            
+                        if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Down" and self.Timeout_Thumb_Up < time.time():
+                            keyboard.write("👎")
+                            keyboard.press_and_release('enter')
+                            self.Timeout_Thumb_Up = time.time() + 1
+                            
+                                
+                
+                
                 if self.tkapp.laser_pointer.get():
                     for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
                         coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
@@ -176,15 +215,14 @@ class ToplevelWindow(ctk.CTkToplevel):
         Entry_cam_number = ctk.CTkEntry(self, textvariable=self.tkapp.cam_number)
         Entry_cam_number.pack(side=tk.TOP)  
         
-        Label_skeleton_mode = ctk.CTkLabel(self, text="Toggle the skeleton mode")
-        Label_skeleton_mode.pack(side=tk.TOP)
-        Checkbox_skeleton_mode = ctk.CTkCheckBox(self, variable=self.tkapp.skeleton_mode)
-        Checkbox_skeleton_mode.pack(side=tk.TOP)
+        Checkboxframe = ctk.CTkFrame(self)
+        Checkboxframe.pack(side=tk.TOP)
         
-        Label_laser_pointer = ctk.CTkLabel(self, text="Toggle the laser pointer")
-        Label_laser_pointer.pack(side=tk.TOP)
-        Checkbox_laser_pointer = ctk.CTkCheckBox(self, variable=self.tkapp.laser_pointer)
-        Checkbox_laser_pointer.pack(side=tk.TOP)
+        Checkbox_skeleton_mode = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.skeleton_mode, text="Toggle skeleton mode")
+        Checkbox_skeleton_mode.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
+        
+        Checkbox_laser_pointer = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.laser_pointer, text="Toggle laser pointer")
+        Checkbox_laser_pointer.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
         
         self.bind("<Return>", lambda event: self.apply_settings())
         
@@ -200,8 +238,8 @@ class ToplevelWindow(ctk.CTkToplevel):
             max_num_hands=int(self.tkapp.max_num_hands.get()))
         
         save_settigs = """
-        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, laser_pointer)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, laser_pointer, cam_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """
         
         self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
@@ -209,7 +247,11 @@ class ToplevelWindow(ctk.CTkToplevel):
                                             self.tkapp.max_num_hands.get(),
                                             self.tkapp.model_complexity.get(),
                                             self.tkapp.skeleton_mode.get(),
-                                            self.tkapp.laser_pointer.get()))
+                                            self.tkapp.laser_pointer.get(),
+                                            self.tkapp.cam_number.get()))
+        
+        #self.cap.release()
+        self.tkapp.HandTracker.cap = cv2.VideoCapture(int(self.tkapp.cam_number.get()))
         
         self.tkapp.conn.commit()
 
@@ -230,8 +272,8 @@ class Window(ctk.CTk):
         self.video_feed_width = 640
         self.video_feed_height = 360
         
-        self.tkinter_width = 640
-        self.tkinter_height = 360
+        self.tkinter_width = int(2560/2)
+        self.tkinter_height = int(1440/2)
         
         # Set window title
         self.title("Hand Tracking App")
@@ -243,6 +285,9 @@ class Window(ctk.CTk):
                activeBackground='#3D3D3D', activeForeground='#ffffff')
         
         self.bind("<Destroy>", lambda event: self.close_application())
+        #bind ^ to opeb settings window
+        self.bind("<s>", lambda event: self.create_settings_window())
+        self.bind("<S>", lambda event: self.create_settings_window())
         
         self.create_navigation_bar()
         
@@ -262,6 +307,7 @@ class Window(ctk.CTk):
         self.model_complexity = tk.StringVar(value="1")
         self.skeleton_mode = tk.BooleanVar(value=False)
         self.laser_pointer = tk.BooleanVar(value=False)
+        self.cam_number = tk.StringVar(value="0")
         
         if settings is not None:
             self.detection_confidence.set(settings[1])
@@ -270,12 +316,19 @@ class Window(ctk.CTk):
             self.model_complexity.set(settings[4])
             self.skeleton_mode.set(settings[5])
             self.laser_pointer.set(settings[6])
+            self.cam_number.set(settings[7])
         
     # create settings window when settings button was pressed 
     def create_settings_window(self):
         if self.toplevel_window is None or not self.toplevel_window.winfo_exists():
             self.toplevel_window = ToplevelWindow(self)  # create window if its None or destroyed
+            time.sleep(0.1)
+            self.toplevel_window.update()
+            self.toplevel_window.update_idletasks()
+            self.update()
+            self.update_idletasks()
             self.toplevel_window.lift()
+            self.toplevel_window.focus()
         else:
             self.toplevel_window.focus()  # if window exists focus it
 
@@ -304,7 +357,7 @@ class Window(ctk.CTk):
             StartT = time.time()
             #time.sleep(0.03)
             frame = self.HandTracker.process_video()
-
+            
             #Update the image to tkinter...
             try:
                 img_update = Image.fromarray(frame, 'RGB')
@@ -332,7 +385,7 @@ class Window(ctk.CTk):
     def close_application(self):
         self.running = False
         self.conn.close()
-        os._exit(0)
+        #os._exit(0)
         
                         
     def init_sqlite_db(self):
@@ -345,7 +398,8 @@ class Window(ctk.CTk):
                         max_num_hands TEXT DEFAULT 2,
                         model_complexity TEXT DEFAULT 0,
                         skeleton_mode BOOLEAN DEFAULT FALSE,
-                        laser_pointer BOOLEAN DEFAULT FALSE
+                        laser_pointer BOOLEAN DEFAULT FALSE,
+                        cam_number TEXT DEFAULT 0
                         )""")
         self.conn.commit()
 
