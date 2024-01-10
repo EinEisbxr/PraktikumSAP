@@ -17,6 +17,15 @@ using AI recognition to detect hands, gestrues, objects and faces. We use it to 
 
 2. Thumbs down: if you show a thumbs down in your camera it writes the emoji "👎" and presses "Enter"
 
+### Mouse control
+This mode lets you control your mouse with your hand. The mouse cursor follows the tip of your index finger across your screen size.
+
+* Move your mouse: Point up with your index finger and move your hand
+
+* Left click: Open your hand
+
+### Laser pointer
+Show a laser pointer starting from the tip of your index finger that reaches the border of the screen
 
 
 ## Settings
@@ -47,8 +56,33 @@ using AI recognition to detect hands, gestrues, objects and faces. We use it to 
    * On: Overlay the tracked skeleton over your hand
    * Off: Don't show the skeleton
 
-2. Toggle laser pointer:
-   * On: Show a laser pointer starting from the tip of your index finger that reaches the border of the screen
-   * Off: Don't show the laser pointer
+2. Toggle gesture recognition:
+    * On: Try to detect the gesture you are doing
+    * Off: Skip that part of the code for better performance
+
+3. Gesture mode selector: Select the mode you want to use. Only one possible at a time:
+    * Quick Chat
+    * Macro
+    * Mouse Control
+    * Laser pointer
 
 ### Don't forget to apply your settings using the "Apply" button or the "Enter" key on your keyboard
+
+
+## Hotkeys
+### While in main window
+* Open / Focus settings window: "**S**"
+
+
+### While in settings window
+* Apply settings: "**Enter**"
+
+
+### In both windows possible
+* Stop everything: "**Q**"
+
+* Toggle skeleton mode: "**F1**" 
+
+* Toggle gesture recognition: "**F2**"
+    * Switch to next gesture mode: "**F3**"
+    * Switch to previous gesture mode: "**F4**"
