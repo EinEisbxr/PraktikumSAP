@@ -13,6 +13,8 @@ from PIL import Image, ImageTk
 import os
 import sqlite3
 import keyboard
+import pyautogui as pag
+import threading
 
 
 global tkapp
@@ -43,6 +45,9 @@ class HandTracking():
         self.tkapp = tkapp
         self.Timeout_Thumb_Up = 0
         
+        self.open_palm_counter = 0
+        self.none_counter = 0
+        
     def process_video(self):
         #frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
         #load frames from file
@@ -55,9 +60,6 @@ class HandTracking():
         frame = cv2.flip(frame, 1)
 
         if ret:
-            #frame = cv2.flip(frame, 1)
-
-            
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frameRGB = frame
 
@@ -73,28 +75,73 @@ class HandTracking():
                 
                 self.frame_timestamp_ms = int(round(time.time() * 1000))
                 
-                gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
-                
-                if gesture_recognition_result is not None:
-                    #GestureRecognizerResult(gestures=[[Category(index=-1, score=0.552459716796875, display_name='', category_name='Open_Palm')]] get category name
-                    if len(gesture_recognition_result.gestures) > 0:
-                        if gesture_recognition_result.gestures[0][0].category_name != None and gesture_recognition_result.gestures[0][0].category_name != "" and gesture_recognition_result.gestures[0][0].category_name != "None":
-                            cv2.putText(frame, f"Gesture: {gesture_recognition_result.gestures[0][0].category_name}", (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height-100)), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
-                        print(gesture_recognition_result.gestures[0][0].category_name)
+                if self.tkapp.gesture_recognition.get():
+                    gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
+                    
+                    if gesture_recognition_result is not None:
+                        #GestureRecognizerResult(gestures=[[Category(index=-1, score=0.552459716796875, display_name='', category_name='Open_Palm')]] get category name
+                        if len(gesture_recognition_result.gestures) > 0:
+                            if gesture_recognition_result.gestures[0][0].category_name != None and gesture_recognition_result.gestures[0][0].category_name != "" and gesture_recognition_result.gestures[0][0].category_name != "None":
+                                cv2.putText(frame, f"Gesture: {gesture_recognition_result.gestures[0][0].category_name}", (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height-100)), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+                            print(gesture_recognition_result.gestures[0][0].category_name)
 
-                        if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Up" and self.Timeout_Thumb_Up < time.time():
-                            keyboard.write("👍")
-                            keyboard.press_and_release('enter')
-                            self.Timeout_Thumb_Up = time.time() + 1
+                            #Quick Chat mode
+                            if self.tkapp.gesture_mode.get() == 1:
+                                if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Up" and self.Timeout_Thumb_Up < time.time():
+                                    keyboard.write("👍")
+                                    keyboard.press_and_release('enter')
+                                    self.Timeout_Thumb_Up = time.time() + 1
+                                    
+                                if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Down" and self.Timeout_Thumb_Up < time.time():
+                                    keyboard.write("👎")
+                                    keyboard.press_and_release('enter')
+                                    self.Timeout_Thumb_Up = time.time() + 1
+                                    
+                            #Macro mode
+                            elif self.tkapp.gesture_mode.get() == 2:
+                                pass
                             
-                        if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Down" and self.Timeout_Thumb_Up < time.time():
-                            keyboard.write("👎")
-                            keyboard.press_and_release('enter')
-                            self.Timeout_Thumb_Up = time.time() + 1
-                            
-                                
-                
-                
+                            #Mouse Control mode
+                            elif self.tkapp.gesture_mode.get() == 3:
+                                coordinates_index_finger = (results.multi_hand_landmarks[0].landmark[8].x, results.multi_hand_landmarks[0].landmark[8].y)
+                                if threading.active_count() < 2:
+                                    tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*self.tkapp.screenwidth*2, coordinates_index_finger[1]*self.tkapp.screenheight, 0.0, 0.0, False))
+                                    tmousemove.start()
+                                    
+                                #When the palm is open, then display some sort of progress cirle around the hand and click when the circle is full it should be like a 1 second delay
+                                if gesture_recognition_result.gestures[0][0].category_name == "Open_Palm":
+                                    # Increase the counter
+                                    self.open_palm_counter += 1
+
+                                    # Reset the none counter
+                                    self.none_counter = 0
+
+                                    # Calculate the progress
+                                    progress = self.open_palm_counter / self.tkapp.fps
+
+                                    # Draw the circle
+                                    cv2.circle(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), 50, (0, 255, 0), 2)
+
+                                    # Draw the progress arc
+                                    cv2.ellipse(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), (50, 50), 0, 0, progress * 360, (0, 255, 0), 2)
+
+                                    # If the palm has been open for 1 second, trigger a click event
+                                    if self.open_palm_counter >= self.tkapp.fps:
+                                        pag.click()
+                                        self.open_palm_counter = 0
+                                else:
+                                    # Increase the none counter
+                                    self.none_counter += 1
+
+                                    # If there have been 3 consecutive none statements, reset the open palm counter
+                                    if self.none_counter >= 3:
+                                        self.open_palm_counter = 0
+                                        self.none_counter = 0
+                                    
+                            else:
+                                print("Error: Gesture Mode not found")
+                                    
+                    
                 if self.tkapp.laser_pointer.get():
                     for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
                         coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
@@ -139,7 +186,6 @@ class HandTracking():
         else:
             print("Error while reading frame")    
             
-
 
 class ToplevelWindow(ctk.CTkToplevel):
     def __init__(self, tkapp, *args, **kwargs):
@@ -190,6 +236,19 @@ class ToplevelWindow(ctk.CTkToplevel):
         Checkbox_laser_pointer = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.laser_pointer, text="Toggle laser pointer")
         Checkbox_laser_pointer.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
         
+        Checkbox_gesture_recognition = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.gesture_recognition, text="Toggle gesture recognition")
+        Checkbox_gesture_recognition.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
+        
+        RadioButton_quick_chat = ctk.CTkRadioButton(Checkboxframe, variable=self.tkapp.gesture_mode, value=1, text="Quick Chat")
+        RadioButton_quick_chat.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
+        
+        RadioButton_macro = ctk.CTkRadioButton(Checkboxframe, variable=self.tkapp.gesture_mode, value=2, text="Macro")
+        RadioButton_macro.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
+        
+        RadioButton_mouse_control = ctk.CTkRadioButton(Checkboxframe, variable=self.tkapp.gesture_mode, value=3, text="Mouse Control")
+        RadioButton_mouse_control.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
+        
+        
         self.bind("<Return>", lambda event: self.apply_settings())
         
         Button_apply = ctk.CTkButton(self, text="Apply", command=self.apply_settings)
@@ -204,8 +263,8 @@ class ToplevelWindow(ctk.CTkToplevel):
             max_num_hands=int(self.tkapp.max_num_hands.get()))
         
         save_settigs = """
-        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, laser_pointer, cam_number)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, laser_pointer, cam_number, gesture_recognition, gesture_mode)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
@@ -214,12 +273,15 @@ class ToplevelWindow(ctk.CTkToplevel):
                                             self.tkapp.model_complexity.get(),
                                             self.tkapp.skeleton_mode.get(),
                                             self.tkapp.laser_pointer.get(),
-                                            self.tkapp.cam_number.get()))
+                                            self.tkapp.cam_number.get(),
+                                            self.tkapp.gesture_recognition.get(),
+                                            self.tkapp.gesture_mode.get()))
         
         #self.cap.release()
         self.tkapp.HandTracker.cap = cv2.VideoCapture(int(self.tkapp.cam_number.get()))
         
         self.tkapp.conn.commit()
+
 
 class Window(ctk.CTk):  
     def __init__(self):
@@ -274,6 +336,8 @@ class Window(ctk.CTk):
         self.skeleton_mode = tk.BooleanVar(value=False)
         self.laser_pointer = tk.BooleanVar(value=False)
         self.cam_number = tk.StringVar(value="0")
+        self.gesture_recognition = tk.BooleanVar(value=False)
+        self.gesture_mode = tk.IntVar(value=1)
         
         if settings is not None:
             self.detection_confidence.set(settings[1])
@@ -283,6 +347,8 @@ class Window(ctk.CTk):
             self.skeleton_mode.set(settings[5])
             self.laser_pointer.set(settings[6])
             self.cam_number.set(settings[7])
+            self.gesture_recognition.set(settings[8])
+            self.gesture_mode.set(settings[9])
         
     # create settings window when settings button was pressed 
     def create_settings_window(self):
@@ -365,7 +431,9 @@ class Window(ctk.CTk):
                         model_complexity TEXT DEFAULT 0,
                         skeleton_mode BOOLEAN DEFAULT FALSE,
                         laser_pointer BOOLEAN DEFAULT FALSE,
-                        cam_number TEXT DEFAULT 0
+                        cam_number TEXT DEFAULT 0,
+                        gesture_recognition BOOLEAN DEFAULT FALSE,
+                        gesture_mode TEXT DEFAULT 1
                         )""")
         self.conn.commit()
 
