@@ -44,36 +44,57 @@ class HandTracking():
         
         self.tkapp = tkapp
         self.Timeout_Thumb_Up = 0
+        self.TimeoutUpDown = 0
         
         self.open_palm_counter = 0
         self.none_counter = 0
+        self.thumb_up_counter = 0
+        self.thumb_down_counter = 0
         
     def process_video(self):
-        #frame=np.random.randint(0,255,[1000,1000,3],dtype='uint8')
-        #load frames from file
-        #frame = cv2.imread("test3.jpeg")
-        #ret = True
+        video_feed_width = self.tkapp.video_feed_width 
+        video_feed_width_half = int(video_feed_width / 2) 
+        video_feed_height = self.tkapp.video_feed_height 
+        video_feed_height_minus_50 = int(video_feed_height - 50) 
+        video_feed_height_minus_100 = int(video_feed_height - 100) 
+        screenwidth = self.tkapp.screenwidth 
+        screenheight = self.tkapp.screenheight 
+        fps = self.tkapp.fps 
+        gesture_mode = self.tkapp.gesture_mode.get() 
+        skeleton_mode = self.tkapp.skeleton_mode.get() 
+        #
+        # esture_recognition = self.tkapp.gesture_recognition.get()
+        timetime = time.time()
+        
+        
         ret, frame = self.cap.read()
-        frame = cv2.resize(frame, (self.tkapp.video_feed_width, self.tkapp.video_feed_height))
+        frame = cv2.resize(frame, (video_feed_width, video_feed_height))
         
         #flip the frame
         frame = cv2.flip(frame, 1)
+        
+        
 
         if ret:
+            
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frameRGB = frame
 
-            cv2.putText(frame, f"FPS: {self.tkapp.fps:.2f}", (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height-50)), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+            cv2.putText(frame, f"FPS: {fps:.2f}", (video_feed_width_half, video_feed_height_minus_50), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
 
+            start_time = timetime
 
             results = self.hands.process(frameRGB)
+            
+            end_time = timetime
+            print(f"Execution time: {end_time - start_time} seconds")  
 
             # If hands are present in image(frame) 
             if results.multi_hand_landmarks: 
                             
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
                 
-                self.frame_timestamp_ms = int(round(time.time() * 1000))
+                self.frame_timestamp_ms = int(round(timetime * 1000))
                 
                 if self.tkapp.gesture_recognition.get():
                     gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
@@ -81,35 +102,36 @@ class HandTracking():
                     if gesture_recognition_result is not None:
                         #GestureRecognizerResult(gestures=[[Category(index=-1, score=0.552459716796875, display_name='', category_name='Open_Palm')]] get category name
                         if len(gesture_recognition_result.gestures) > 0:
-                            if gesture_recognition_result.gestures[0][0].category_name != None and gesture_recognition_result.gestures[0][0].category_name != "" and gesture_recognition_result.gestures[0][0].category_name != "None":
-                                cv2.putText(frame, f"Gesture: {gesture_recognition_result.gestures[0][0].category_name}", (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height-100)), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
-                            print(gesture_recognition_result.gestures[0][0].category_name)
+                            category_name = gesture_recognition_result.gestures[0][0].category_name
+                            if category_name and category_name != "None":
+                                cv2.putText(frame, f"Gesture: {category_name}", (video_feed_width_half, video_feed_height_minus_100), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+                            print(category_name)
 
                             #Quick Chat mode
-                            if self.tkapp.gesture_mode.get() == 1:
-                                if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Up" and self.Timeout_Thumb_Up < time.time():
+                            if gesture_mode == 1:
+                                if category_name == "Thumb_Up" and self.Timeout_Thumb_Up < timetime:
                                     keyboard.write("👍")
                                     keyboard.press_and_release('enter')
-                                    self.Timeout_Thumb_Up = time.time() + 1
+                                    self.Timeout_Thumb_Up = timetime + 1
                                     
-                                if gesture_recognition_result.gestures[0][0].category_name == "Thumb_Down" and self.Timeout_Thumb_Up < time.time():
+                                if category_name == "Thumb_Down" and self.Timeout_Thumb_Up < timetime:
                                     keyboard.write("👎")
                                     keyboard.press_and_release('enter')
-                                    self.Timeout_Thumb_Up = time.time() + 1
+                                    self.Timeout_Thumb_Up = timetime + 1
                                     
                             #Macro mode
-                            elif self.tkapp.gesture_mode.get() == 2:
+                            elif gesture_mode == 2:
                                 pass
                             
                             #Mouse Control mode
-                            elif self.tkapp.gesture_mode.get() == 3:
+                            elif gesture_mode == 3:
                                 coordinates_index_finger = (results.multi_hand_landmarks[0].landmark[8].x, results.multi_hand_landmarks[0].landmark[8].y)
                                 if threading.active_count() < 2:
-                                    tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*self.tkapp.screenwidth*2, coordinates_index_finger[1]*self.tkapp.screenheight, 0.0, 0.0, False))
+                                    tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*screenwidth*2, coordinates_index_finger[1]*screenheight, 0.0, 0.0, False))
                                     tmousemove.start()
                                     
                                 #When the palm is open, then display some sort of progress cirle around the hand and click when the circle is full it should be like a 1 second delay
-                                if gesture_recognition_result.gestures[0][0].category_name == "Open_Palm":
+                                if category_name == "Open_Palm":
                                     # Increase the counter
                                     self.open_palm_counter += 1
 
@@ -129,58 +151,99 @@ class HandTracking():
                                     if self.open_palm_counter >= self.tkapp.fps:
                                         pag.click()
                                         self.open_palm_counter = 0
+                                
+                                
+                                elif category_name == "Thumb_Up" and self.TimeoutUpDown < timetime:
+                                    self.thumb_up_counter += 1
+                                    self.none_counter = 0
+                                    if self.thumb_up_counter >= self.tkapp.fps:
+                                        #press arrow up
+                                        keyboard.press_and_release('up')
+                                        self.thumb_up_counter = 0
+                                        self.TimeoutUpDown = timetime + 1
+                                    
+                                elif category_name == "Thumb_Down"and self.TimeoutUpDown < timetime:
+                                    self.thumb_down_counter += 1
+                                    self.none_counter = 0
+                                    if self.thumb_down_counter >= self.tkapp.fps:
+                                        #press arrow down
+                                        keyboard.press_and_release('down')
+                                        self.thumb_down_counter = 0
+                                        self.TimeoutUpDown = timetime + 1
+                                
                                 else:
                                     # Increase the none counter
                                     self.none_counter += 1
-
+                                    
                                     # If there have been 3 consecutive none statements, reset the open palm counter
-                                    if self.none_counter >= 3:
+                                    if self.none_counter >= self.tkapp.fps:
                                         self.open_palm_counter = 0
                                         self.none_counter = 0
+                                        self.thumb_up_counter = 0
+                                        self.thumb_down_counter = 0
+
+                            elif gesture_mode == 4:
+                                lines = []
+                                for hand_landmarks in results.multi_hand_landmarks:
+                                    coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
+                                    coordinates7 = (hand_landmarks.landmark[7].x, hand_landmarks.landmark[7].y)
+                                    coordinates8 = (hand_landmarks.landmark[8].x, hand_landmarks.landmark[8].y)
+
+                                    # Calculate slopes
+                                    slope1 = (coordinates7[1] - coordinates6[1]) / (coordinates7[0] - coordinates6[0]) if coordinates7[0] != coordinates6[0] else float('inf')
+                                    slope2 = (coordinates8[1] - coordinates7[1]) / (coordinates8[0] - coordinates7[0]) if coordinates8[0] != coordinates7[0] else float('inf')
+
+                                    if abs(slope1 - slope2) < 0.5:
+                                        # Calculate the direction of the line from coordinates7 to coordinates8
+                                        direction = (coordinates8[0] - coordinates7[0], coordinates8[1] - coordinates7[1])
+
+                                        # Normalize the direction
+                                        length = (direction[0]**2 + direction[1]**2)**0.5
+                                        direction = (direction[0]/length, direction[1]/length)
+
+                                        # Calculate the point on the border of the screen
+                                        border_point = (int(coordinates7[0]*video_feed_width + direction[0]*video_feed_width), int(coordinates7[1]*video_feed_height + direction[1]*video_feed_height))
+
+                                        # Draw the line from coordinates7 to coordinates8
+                                        cv2.line(frame, (int(coordinates7[0]*video_feed_width), int(coordinates7[1]*video_feed_height)), (int(coordinates8[0]*video_feed_width), int(coordinates8[1]*video_feed_height)), (0, 255, 0), 10)
+
+                                        # Draw the line from coordinates8 to the border of the screen
+                                        cv2.line(frame, (int(coordinates8[0]*video_feed_width), int(coordinates8[1]*video_feed_height)), border_point, (0, 255, 0), 10)
+                                        
+                                        lines.append(((int(coordinates7[0]*video_feed_width), int(coordinates7[1]*video_feed_height)), border_point))
+                                    
+                                # Check for intersections
+                                for i in range(len(lines)):
+                                    for j in range(i+1, len(lines)):
+                                        # Calculate intersection point
+                                        xdiff = (lines[i][0][0] - lines[i][1][0], lines[j][0][0] - lines[j][1][0])
+                                        ydiff = (lines[i][0][1] - lines[i][1][1], lines[j][0][1] - lines[j][1][1])
+
+                                        def det(a, b):
+                                            return a[0] * b[1] - a[1] * b[0]
+
+                                        div = det(xdiff, ydiff)
+                                        if div == 0:
+                                            continue
+
+                                        d = (det(*lines[i]), det(*lines[j]))
+                                        x = det(d, xdiff) / div
+                                        y = det(d, ydiff) / div
+
+                                        # Draw a circle at the intersection point
+                                        cv2.circle(frame, (int(x), int(y)), radius=40, color=(255, 0, 0), thickness=-1)
                                     
                             else:
                                 print("Error: Gesture Mode not found")
-                                    
+                              
                     
-                if self.tkapp.laser_pointer.get():
-                    for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
-                        coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
-                        coordinates7 = (hand_landmarks.landmark[7].x, hand_landmarks.landmark[7].y)
-                        coordinates8 = (hand_landmarks.landmark[8].x, hand_landmarks.landmark[8].y)
-                        #print(coordinates7, coordinates8)
-
-                        # Calculate slopes
-                        slope1 = (coordinates7[1] - coordinates6[1]) / (coordinates7[0] - coordinates6[0]) if coordinates7[0] != coordinates6[0] else float('inf')
-                        slope2 = (coordinates8[1] - coordinates7[1]) / (coordinates8[0] - coordinates7[0]) if coordinates8[0] != coordinates7[0] else float('inf')
-
-                        if abs(slope1 - slope2) < 0.5:
-                            # Calculate the direction of the line from coordinates7 to coordinates8
-                            direction = (coordinates8[0] - coordinates7[0], coordinates8[1] - coordinates7[1])
-
-                            # Normalize the direction
-                            length = (direction[0]**2 + direction[1]**2)**0.5
-                            direction = (direction[0]/length, direction[1]/length)
-
-                            # Calculate the point on the border of the screen
-                            # Assuming the screen size is (self.tkapp.video_feed_width, screen_height)
-                            border_point = (int(coordinates7[0]*self.tkapp.video_feed_width + direction[0]*self.tkapp.video_feed_width), int(coordinates7[1]*self.tkapp.video_feed_height + direction[1]*self.tkapp.video_feed_height))
-
-                            # Draw the line from coordinates7 to coordinates8
-                            cv2.line(frame, (int(coordinates7[0]*self.tkapp.video_feed_width), int(coordinates7[1]*self.tkapp.video_feed_height)), (int(coordinates8[0]*self.tkapp.video_feed_width), int(coordinates8[1]*self.tkapp.video_feed_height)), (0, 255, 0), 10)
-
-                            # Draw the line from coordinates8 to the border of the screen
-                            cv2.line(frame, (int(coordinates8[0]*self.tkapp.video_feed_width), int(coordinates8[1]*self.tkapp.video_feed_height)), border_point, (0, 255, 0), 10)
-                        
-                
-                #print(self.tkapp.skeleton_mode.get())            
-                if self.tkapp.skeleton_mode.get():
+                if skeleton_mode:
                     for hand_landmarks in results.multi_hand_landmarks:
                         self.mp_drawing.draw_landmarks(
                             frame, hand_landmarks, self.mpHands.HAND_CONNECTIONS,
                             self.mp_drawing_styles.get_default_hand_landmarks_style(),
                             self.mp_drawing_styles.get_default_hand_connections_style()) 
-        
-                        
+
             return frame
 
         else:
@@ -190,7 +253,7 @@ class HandTracking():
 class ToplevelWindow(ctk.CTkToplevel):
     def __init__(self, tkapp, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.geometry("400x400")
+        self.geometry("400x600")
         self.title("Settings")
 
         #self.configure(fg_color="#0e1718")
@@ -233,9 +296,6 @@ class ToplevelWindow(ctk.CTkToplevel):
         Checkbox_skeleton_mode = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.skeleton_mode, text="Toggle skeleton mode")
         Checkbox_skeleton_mode.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
         
-        Checkbox_laser_pointer = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.laser_pointer, text="Toggle laser pointer")
-        Checkbox_laser_pointer.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
-        
         Checkbox_gesture_recognition = ctk.CTkCheckBox(Checkboxframe, variable=self.tkapp.gesture_recognition, text="Toggle gesture recognition")
         Checkbox_gesture_recognition.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
         
@@ -247,6 +307,9 @@ class ToplevelWindow(ctk.CTkToplevel):
         
         RadioButton_mouse_control = ctk.CTkRadioButton(Checkboxframe, variable=self.tkapp.gesture_mode, value=3, text="Mouse Control")
         RadioButton_mouse_control.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
+        
+        Radio_button_laser_pointer = ctk.CTkRadioButton(Checkboxframe, variable=self.tkapp.gesture_mode, value=4, text="Laser Pointer")
+        Radio_button_laser_pointer.pack(side=tk.TOP, anchor=tk.W, pady=5, padx=5)
         
         
         self.bind("<Return>", lambda event: self.apply_settings())
@@ -263,8 +326,8 @@ class ToplevelWindow(ctk.CTkToplevel):
             max_num_hands=int(self.tkapp.max_num_hands.get()))
         
         save_settigs = """
-        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, laser_pointer, cam_number, gesture_recognition, gesture_mode)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, cam_number, gesture_recognition, gesture_mode)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
@@ -272,7 +335,6 @@ class ToplevelWindow(ctk.CTkToplevel):
                                             self.tkapp.max_num_hands.get(),
                                             self.tkapp.model_complexity.get(),
                                             self.tkapp.skeleton_mode.get(),
-                                            self.tkapp.laser_pointer.get(),
                                             self.tkapp.cam_number.get(),
                                             self.tkapp.gesture_recognition.get(),
                                             self.tkapp.gesture_mode.get()))
@@ -293,15 +355,13 @@ class Window(ctk.CTk):
 
         self.toplevel_window = None
         self.fps = -1
-        self.skeleton_mode = False
-        self.laser_pointer = False
         self.running = True
         
         self.video_feed_width = 640
         self.video_feed_height = 360
         
-        self.tkinter_width = int(2560/2)
-        self.tkinter_height = int(1440/2)
+        self.tkinter_width = int(self.screenwidth/2)
+        self.tkinter_height = int(self.screenheight/2)
         
         # Set window title
         self.title("Hand Tracking App")
@@ -316,6 +376,16 @@ class Window(ctk.CTk):
         #bind ^ to opeb settings window
         self.bind("<s>", lambda event: self.create_settings_window())
         self.bind("<S>", lambda event: self.create_settings_window())
+        
+        self.bind("<q>", lambda event: self.close_application())
+        self.bind("<Q>", lambda event: self.close_application())
+        
+        self.bind("<F1>", lambda event: self.hotkey_functions("F1"))
+        self.bind("<F2>", lambda event: self.hotkey_functions("F2"))
+        self.bind("<F3>", lambda event: self.hotkey_functions("F3"))
+        self.bind("<F4>", lambda event: self.hotkey_functions("F4"))
+        
+                   
         
         self.create_navigation_bar()
         
@@ -334,7 +404,6 @@ class Window(ctk.CTk):
         self.max_num_hands = tk.StringVar(value="2")
         self.model_complexity = tk.StringVar(value="1")
         self.skeleton_mode = tk.BooleanVar(value=False)
-        self.laser_pointer = tk.BooleanVar(value=False)
         self.cam_number = tk.StringVar(value="0")
         self.gesture_recognition = tk.BooleanVar(value=False)
         self.gesture_mode = tk.IntVar(value=1)
@@ -345,10 +414,9 @@ class Window(ctk.CTk):
             self.max_num_hands.set(settings[3])
             self.model_complexity.set(settings[4])
             self.skeleton_mode.set(settings[5])
-            self.laser_pointer.set(settings[6])
-            self.cam_number.set(settings[7])
-            self.gesture_recognition.set(settings[8])
-            self.gesture_mode.set(settings[9])
+            self.cam_number.set(settings[6])
+            self.gesture_recognition.set(settings[7])
+            self.gesture_mode.set(settings[8])
         
     # create settings window when settings button was pressed 
     def create_settings_window(self):
@@ -375,6 +443,7 @@ class Window(ctk.CTk):
         
         
         self.configure(menu=menu)
+  
         
     def video_feed(self):
         
@@ -402,6 +471,8 @@ class Window(ctk.CTk):
                 image_label.configure(image=ctkimage)
                 image_label.update()
                 
+                 
+                
                 self.fps = 1/(time.time()-StartT)
                 
             except RuntimeError:
@@ -411,13 +482,12 @@ class Window(ctk.CTk):
             except AttributeError:
                 print("Window was closed: AttributeError")
                 self.close_application()
-
-                
+     
     
     def close_application(self):
         self.running = False
         self.conn.close()
-        #os._exit(0)
+        os._exit(0)
         
                         
     def init_sqlite_db(self):
@@ -430,14 +500,39 @@ class Window(ctk.CTk):
                         max_num_hands TEXT DEFAULT 2,
                         model_complexity TEXT DEFAULT 0,
                         skeleton_mode BOOLEAN DEFAULT FALSE,
-                        laser_pointer BOOLEAN DEFAULT FALSE,
                         cam_number TEXT DEFAULT 0,
                         gesture_recognition BOOLEAN DEFAULT FALSE,
                         gesture_mode TEXT DEFAULT 1
                         )""")
         self.conn.commit()
 
+    def hotkey_functions(self, hotkey):
+        if "F1" in hotkey:
+            self.skeleton_mode.set(not self.skeleton_mode.get())
+            self.apply_settings_hotkeys()
+        elif "F2" in hotkey:
+            self.gesture_recognition.set(not self.gesture_recognition.get())
+            self.apply_settings_hotkeys()
+        elif "F3" in hotkey:
+            self.gesture_mode.set(self.gesture_mode.get() + 1 if self.gesture_mode.get() < 4 else 1)
+            self.apply_settings_hotkeys()
+        elif "F4" in hotkey:
+            self.gesture_mode.set(self.gesture_mode.get() - 1 if self.gesture_mode.get() > 1 else 4)
+            self.apply_settings_hotkeys()
+        
+        
+    def apply_settings_hotkeys(self):
 
+        save_settigs = """
+        INSERT INTO settings (skeleton_mode, gesture_recognition, gesture_mode)
+        VALUES (?, ?, ?)
+        """
+        
+        self.tkapp.c.execute(save_settigs, (self.skeleton_mode.get(),
+                                            self.gesture_recognition.get(),
+                                            self.gesture_mode.get()))
+        
+        self.tkapp.conn.commit()
         
 tkapp = Window()
 
