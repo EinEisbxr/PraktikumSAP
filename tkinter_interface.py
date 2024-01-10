@@ -27,7 +27,7 @@ class HandTracking():
         
         VisionRunningMode = mp.tasks.vision.RunningMode
                 
-        self.base_options = python.BaseOptions(model_asset_path=r'C:\Users\Felix\OneDrive - Helmholtz-Gymnasium\Desktop\Github\PraktikumSAP\gesture_recognizer.task')
+        self.base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
         self.options = vision.GestureRecognizerOptions(base_options=self.base_options, running_mode=VisionRunningMode.VIDEO)
         self.recognizer = vision.GestureRecognizer.create_from_options(self.options)
 
@@ -124,41 +124,7 @@ class HandTracking():
                             # Draw the line from coordinates8 to the border of the screen
                             cv2.line(frame, (int(coordinates8[0]*self.tkapp.video_feed_width), int(coordinates8[1]*self.tkapp.video_feed_height)), border_point, (0, 255, 0), 10)
                         
-                    
-                """
-                # Both Hands are present in image(frame) 
-                if len(results.multi_handedness) == 2: 
-                        # Display 'Both Hands' on the image 
-                    cv2.putText(frame, 'Both Hands', (250, 50), 
-                                cv2.FONT_HERSHEY_COMPLEX, 
-                                0.9, (0, 255, 0), 2) 
                 
-                # If any hand present 
-                else:
-                    for i in results.multi_handedness: 
-                        
-                        # Return whether it is Right or Left Hand 
-                        label = MessageToDict(i)['classification'][0]['label'] 
-                        
-
-                        if label == 'Left': 
-                            
-                            # Display 'Left Hand' on 
-                            # left side of window 
-                            cv2.putText(frame, label+' Hand', 
-                                        (20, 50), 
-                                        cv2.FONT_HERSHEY_COMPLEX, 
-                                        0.9, (0, 255, 0), 2) 
-
-                        if label == 'Right': 
-                            
-                            # Display 'Left Hand' 
-                            # on left side of window 
-                            cv2.putText(frame, label+' Hand', (460, 50), 
-                                        cv2.FONT_HERSHEY_COMPLEX, 
-                                        0.9, (0, 255, 0), 2)
-                      
-                """
                 #print(self.tkapp.skeleton_mode.get())            
                 if self.tkapp.skeleton_mode.get():
                     for hand_landmarks in results.multi_hand_landmarks:
