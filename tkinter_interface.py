@@ -384,22 +384,44 @@ class ToplevelWindow(ctk.CTkToplevel):
             min_tracking_confidence=float(self.tkapp.tracking_confidence.get()),
             max_num_hands=int(self.tkapp.max_num_hands.get()))
         
-        save_settigs = """
-        UPDATE settings
-        SET detection_confidence = ?, tracking_confidence = ?, max_num_hands = ?, model_complexity = ?, skeleton_mode = ?, cam_number = ?, gesture_recognition = ?, gesture_mode = ?
-        WHERE id = 1
-        """
+        #chick if there is an entry with the id 1
+        self.tkapp.c.execute("SELECT * FROM settings WHERE id = 1")
+        settings = self.tkapp.c.fetchone()
         
-        self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
-                                            self.tkapp.tracking_confidence.get(),
-                                            self.tkapp.max_num_hands.get(),
-                                            self.tkapp.model_complexity.get(),
-                                            self.tkapp.skeleton_mode.get(),
-                                            self.tkapp.cam_number.get(),
-                                            self.tkapp.gesture_recognition.get(),
-                                            self.tkapp.gesture_mode.get()))
+        if settings is None:
+            insert_settings = """
+            INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, cam_number, gesture_recognition, gesture_mode)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            
+            self.tkapp.c.execute(insert_settings, (self.tkapp.detection_confidence.get(),
+                                                    self.tkapp.tracking_confidence.get(),
+                                                    self.tkapp.max_num_hands.get(),
+                                                    self.tkapp.model_complexity.get(),
+                                                    self.tkapp.skeleton_mode.get(),
+                                                    self.tkapp.cam_number.get(),
+                                                    self.tkapp.gesture_recognition.get(),
+                                                    self.tkapp.gesture_mode.get()))
+                                 
+        else:
+            
+            
+            save_settigs = """
+            UPDATE settings
+            SET detection_confidence = ?, tracking_confidence = ?, max_num_hands = ?, model_complexity = ?, skeleton_mode = ?, cam_number = ?, gesture_recognition = ?, gesture_mode = ?
+            WHERE id = 1
+            """
+            
+            self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
+                                                self.tkapp.tracking_confidence.get(),
+                                                self.tkapp.max_num_hands.get(),
+                                                self.tkapp.model_complexity.get(),
+                                                self.tkapp.skeleton_mode.get(),
+                                                self.tkapp.cam_number.get(),
+                                                self.tkapp.gesture_recognition.get(),
+                                                self.tkapp.gesture_mode.get()))
         
-        #self.cap.release()
+        self.tkapp.HandTracker.cap.release()
         self.tkapp.HandTracker.cap = cv2.VideoCapture(int(self.tkapp.cam_number.get()))
         
         self.tkapp.conn.commit()
@@ -470,20 +492,39 @@ class MacroWindow(ctk.CTkToplevel):
 
 
     def apply_macros(self):
-        save_macros = """
-        UPDATE macro
-        SET open_palm = ?, thumb_up = ?, thumb_down = ?, closed_fist = ?, pointing_up = ?, victory = ?, i_love_you = ?
-        WHERE id = 1
-        """
+        #chick if there is an entry with the id 1
+        self.tkapp.c.execute("SELECT * FROM settings WHERE id = 1")
+        settings = self.tkapp.c.fetchone()
         
-        self.tkapp.c.execute(save_macros, (self.tkapp.open_palm.get(),
-                                            self.tkapp.thumb_up.get(),
-                                            self.tkapp.thumb_down.get(),
-                                            self.tkapp.closed_fist.get(),
-                                            self.tkapp.pointing_up.get(),
-                                            self.tkapp.victory.get(),
-                                            self.tkapp.i_love_you.get()))
-        
+        if settings is None:
+            insert_settings = """
+            INSERT INTO settings (open_palm, thumb_up, thumb_down, closed_fist, pointing_up, victory, i_love_you)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+            
+            self.tkapp.c.execute(insert_settings, (self.tkapp.open_palm.get(),
+                                                    self.tkapp.thumb_up.get(),
+                                                    self.tkapp.thumb_down.get(),
+                                                    self.tkapp.closed_fist.get(),
+                                                    self.tkapp.pointing_up.get(),
+                                                    self.tkapp.victory.get(),
+                                                    self.tkapp.i_love_you.get()))
+                                 
+        else:
+            save_macros = """
+            UPDATE macro
+            SET open_palm = ?, thumb_up = ?, thumb_down = ?, closed_fist = ?, pointing_up = ?, victory = ?, i_love_you = ?
+            WHERE id = 1
+            """
+            
+            self.tkapp.c.execute(save_macros, (self.tkapp.open_palm.get(),
+                                                self.tkapp.thumb_up.get(),
+                                                self.tkapp.thumb_down.get(),
+                                                self.tkapp.closed_fist.get(),
+                                                self.tkapp.pointing_up.get(),
+                                                self.tkapp.victory.get(),
+                                                self.tkapp.i_love_you.get()))
+            
         self.tkapp.conn.commit()
 
 
@@ -635,7 +676,7 @@ class Window(ctk.CTk):
                 
                 frame = self.HandTracker.process_video()
                 
-                print("Time needed: ", time.time()-StartT)
+                #print("Time needed: ", time.time()-StartT)
                 
                 # Resize the frame before converting it to an image
                 frame = cv2.resize(frame, (self.tkinter_width, self.tkinter_height), interpolation=cv2.INTER_NEAREST)
@@ -709,18 +750,34 @@ class Window(ctk.CTk):
         
         
     def apply_settings_hotkeys(self):
+        #chick if there is an entry with the id 1
+        self.c.execute("SELECT * FROM settings WHERE id = 1")
+        settings = self.c.fetchone()
+        print(settings)
+        
+        if settings is None:
+            insert_settings = """
+            INSERT INTO settings (skeleton_mode, gesture_recognition, gesture_mode)
+            VALUES (?, ?, ?)
+            """
+            
+            self.c.execute(insert_settings, (self.skeleton_mode.get(),
+                                                    self.gesture_recognition.get(),
+                                                    self.gesture_mode.get()))
+                                 
+        else:
 
-        save_settigs = """
-        UPDATE settings
-        SET skeleton_mode = ?, gesture_recognition = ?, gesture_mode = ?
-        WHERE id = 1
-        """
+            save_settigs = """
+            UPDATE settings
+            SET skeleton_mode = ?, gesture_recognition = ?, gesture_mode = ?
+            WHERE id = 1
+            """
+            
+            self.c.execute(save_settigs, (self.skeleton_mode.get(),
+                                                self.gesture_recognition.get(),
+                                                self.gesture_mode.get()))
         
-        self.tkapp.c.execute(save_settigs, (self.skeleton_mode.get(),
-                                            self.gesture_recognition.get(),
-                                            self.gesture_mode.get()))
-        
-        self.tkapp.conn.commit()
+        self.conn.commit()
         
 tkapp = Window()
 
