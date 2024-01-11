@@ -71,10 +71,12 @@ Show a laser pointer starting from the tip of your index finger that reaches the
 ### While in main window
 * Open / Focus settings window: "**S**"
 
-### While in settings window
+* Open / Focus macro window: "**M**"
+
+### While in settings or macro window
 * Apply settings: "**Enter**"
 
-### In both windows possible
+### In all windows possible
 * Stop everything: "**Q**"
 
 * Toggle skeleton mode: "**F1**" 
