@@ -289,10 +289,16 @@ class HandTracking():
             AppOpener.open(app_to_open, output=False, match_closest=True)
             print(f"Opening {app_to_open}")
 
-        if "close" in command:
+        elif "close" in command:
             app_to_close = command.split("close ")[1]
             AppOpener.close(app_to_close, output=False, match_closest=True)
             print(f"Closing {app_to_close}")
+            
+        # default to open
+        else:
+            app_to_open = command
+            AppOpener.open(app_to_open, output=False, match_closest=True)
+            print(f"Opening {app_to_open}")
 
 
 
@@ -675,9 +681,7 @@ class Window(ctk.CTk):
                 StartT = time.time()
                 
                 frame = self.HandTracker.process_video()
-                
-                #print("Time needed: ", time.time()-StartT)
-                
+                            
                 # Resize the frame before converting it to an image
                 frame = cv2.resize(frame, (self.tkinter_width, self.tkinter_height), interpolation=cv2.INTER_NEAREST)
                 
