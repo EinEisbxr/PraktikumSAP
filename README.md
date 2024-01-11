@@ -1,7 +1,6 @@
 # PraktikumSAP
 
 ## A repository for our internship at SAP St. Ingbert
-
 While our internship at SAP, we developed a programm that tracks your hand and gestures. With gestures for example you can print emojis. You can also see the skeleton overlayed on your hand and have a laser pointer.
 
 
@@ -11,7 +10,6 @@ using AI recognition to detect hands, gestrues, objects and faces. We use it to 
 
 
 ## Available Gestures
-
 ### Quick chatting using emojis 
 1. Thumbs up: if you show a thumbs up in your camera it writes the emoji "👍" and presses "Enter"
 
@@ -73,10 +71,8 @@ Show a laser pointer starting from the tip of your index finger that reaches the
 ### While in main window
 * Open / Focus settings window: "**S**"
 
-
 ### While in settings window
 * Apply settings: "**Enter**"
-
 
 ### In both windows possible
 * Stop everything: "**Q**"

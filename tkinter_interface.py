@@ -52,6 +52,9 @@ class HandTracking():
         self.thumb_down_counter = 0
         
     def process_video(self):
+        
+        
+        
         video_feed_width = self.tkapp.video_feed_width 
         video_feed_width_half = int(video_feed_width / 2) 
         video_feed_height = self.tkapp.video_feed_height 
@@ -62,193 +65,186 @@ class HandTracking():
         fps = self.tkapp.fps 
         gesture_mode = self.tkapp.gesture_mode.get() 
         skeleton_mode = self.tkapp.skeleton_mode.get() 
-        #
-        # esture_recognition = self.tkapp.gesture_recognition.get()
+        
+        
+        # gesture_recognition = self.tkapp.gesture_recognition.get()
         timetime = time.time()
-        
-        
+
         ret, frame = self.cap.read()
         frame = cv2.resize(frame, (video_feed_width, video_feed_height))
-        
-        #flip the frame
         frame = cv2.flip(frame, 1)
+          
+
+        if not ret:
+            
+            print("Error: No video feed")
+            return
         
+            
+        frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = frameRGB
+
+        cv2.putText(frame, f"FPS: {fps:.2f}", (video_feed_width_half, video_feed_height_minus_50), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+
+        results = self.hands.process(frameRGB)
+
+        # If hands are present in image(frame) 
+        if results.multi_hand_landmarks: 
+                        
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+            
+            self.frame_timestamp_ms = int(round(timetime * 1000))
+            
+            if self.tkapp.gesture_recognition.get():
+                gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
+                
+                if gesture_recognition_result is not None and len(gesture_recognition_result.gestures) > 0:
+                    category_name = gesture_recognition_result.gestures[0][0].category_name
+                    if category_name and category_name != "None":
+                        cv2.putText(frame, f"Gesture: {category_name}", (video_feed_width_half, video_feed_height_minus_100), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
+                    print(category_name)
+
+                    #Quick Chat mode
+                    if gesture_mode == 1:
+                        if category_name == "Thumb_Up" and self.Timeout_Thumb_Up < timetime:
+                            keyboard.write("👍")
+                            keyboard.press_and_release('enter')
+                            self.Timeout_Thumb_Up = timetime + 1
+                            
+                        if category_name == "Thumb_Down" and self.Timeout_Thumb_Up < timetime:
+                            keyboard.write("👎")
+                            keyboard.press_and_release('enter')
+                            self.Timeout_Thumb_Up = timetime + 1
+                            
+                    #Macro mode
+                    elif gesture_mode == 2:
+                        pass
+                    
+                    #Mouse Control mode
+                    elif gesture_mode == 3:
+                        coordinates_index_finger = (results.multi_hand_landmarks[0].landmark[8].x, results.multi_hand_landmarks[0].landmark[8].y)
+                        if threading.active_count() < 2:
+                            tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*screenwidth*1.2, coordinates_index_finger[1]*screenheight*1.2, 0.0, 0.0, False))
+                            tmousemove.start()
+                            
+                        #When the palm is open, then display some sort of progress cirle around the hand and click when the circle is full it should be like a 1 second delay
+                        if category_name == "Open_Palm":
+                            # Increase the counter
+                            self.open_palm_counter += 1
+
+                            # Reset the none counter
+                            self.none_counter = 0
+
+                            # Calculate the progress
+                            progress = self.open_palm_counter / self.tkapp.fps
+
+                            # Draw the circle
+                            cv2.circle(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), 50, (0, 255, 0), 2)
+
+                            # Draw the progress arc
+                            cv2.ellipse(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), (50, 50), 0, 0, progress * 360, (0, 255, 0), 2)
+
+                            # If the palm has been open for 1 second, trigger a click event
+                            if self.open_palm_counter >= self.tkapp.fps:
+                                pag.click()
+                                self.open_palm_counter = 0
+                    
+                        elif category_name == "Thumb_Up" and self.TimeoutUpDown < timetime:
+                            self.thumb_up_counter += 1
+                            self.none_counter = 0
+                            if self.thumb_up_counter >= self.tkapp.fps:
+                                #press arrow up
+                                keyboard.press_and_release('up')
+                                self.thumb_up_counter = 0
+                                self.TimeoutUpDown = timetime + 1
+                            
+                        elif category_name == "Thumb_Down"and self.TimeoutUpDown < timetime:
+                            self.thumb_down_counter += 1
+                            self.none_counter = 0
+                            if self.thumb_down_counter >= self.tkapp.fps:
+                                #press arrow down
+                                keyboard.press_and_release('down')
+                                self.thumb_down_counter = 0
+                                self.TimeoutUpDown = timetime + 1
+                        
+                        else:
+                            # Increase the none counter
+                            self.none_counter += 1
+                            
+                            # If there have been 3 consecutive none statements, reset the open palm counter
+                            if self.none_counter >= self.tkapp.fps:
+                                self.open_palm_counter = 0
+                                self.none_counter = 0
+                                self.thumb_up_counter = 0
+                                self.thumb_down_counter = 0
+
+                    elif gesture_mode == 4:
+                        lines = []
+                        for hand_landmarks in results.multi_hand_landmarks:
+                            coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
+                            coordinates7 = (hand_landmarks.landmark[7].x, hand_landmarks.landmark[7].y)
+                            coordinates8 = (hand_landmarks.landmark[8].x, hand_landmarks.landmark[8].y)
+
+                            # Calculate slopes
+                            slope1 = (coordinates7[1] - coordinates6[1]) / (coordinates7[0] - coordinates6[0]) if coordinates7[0] != coordinates6[0] else float('inf')
+                            slope2 = (coordinates8[1] - coordinates7[1]) / (coordinates8[0] - coordinates7[0]) if coordinates8[0] != coordinates7[0] else float('inf')
+
+                            if abs(slope1 - slope2) < 0.5:
+                                # Calculate the direction of the line from coordinates7 to coordinates8
+                                direction = (coordinates8[0] - coordinates7[0], coordinates8[1] - coordinates7[1])
+
+                                # Normalize the direction
+                                length = (direction[0]**2 + direction[1]**2)**0.5
+                                direction = (direction[0]/length, direction[1]/length)
+
+                                # Calculate the point on the border of the screen
+                                border_point = (int(coordinates7[0]*video_feed_width + direction[0]*video_feed_width), int(coordinates7[1]*video_feed_height + direction[1]*video_feed_height))
+
+                                # Draw the line from coordinates7 to coordinates8
+                                cv2.line(frame, (int(coordinates7[0]*video_feed_width), int(coordinates7[1]*video_feed_height)), (int(coordinates8[0]*video_feed_width), int(coordinates8[1]*video_feed_height)), (0, 255, 0), 10)
+
+                                # Draw the line from coordinates8 to the border of the screen
+                                cv2.line(frame, (int(coordinates8[0]*video_feed_width), int(coordinates8[1]*video_feed_height)), border_point, (0, 255, 0), 10)
+                                
+                                lines.append(((int(coordinates7[0]*video_feed_width), int(coordinates7[1]*video_feed_height)), border_point))
+                            
+                        # Check for intersections
+                        for i in range(len(lines)):
+                            for j in range(i+1, len(lines)):
+                                # Calculate intersection point
+                                xdiff = (lines[i][0][0] - lines[i][1][0], lines[j][0][0] - lines[j][1][0])
+                                ydiff = (lines[i][0][1] - lines[i][1][1], lines[j][0][1] - lines[j][1][1])
+
+                                def det(a, b):
+                                    return a[0] * b[1] - a[1] * b[0]
+
+                                div = det(xdiff, ydiff)
+                                if div == 0:
+                                    continue
+
+                                d = (det(*lines[i]), det(*lines[j]))
+                                x = det(d, xdiff) / div
+                                y = det(d, ydiff) / div
+
+                                # Draw a circle at the intersection point
+                                cv2.circle(frame, (int(x), int(y)), radius=40, color=(255, 0, 0), thickness=-1)
+                            
+                    else:
+                        print("Error: Gesture Mode not found")
+
+            
+            if skeleton_mode:
+                for hand_landmarks in results.multi_hand_landmarks:
+                    self.mp_drawing.draw_landmarks(
+                        frame, hand_landmarks, self.mpHands.HAND_CONNECTIONS,
+                        self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                        self.mp_drawing_styles.get_default_hand_connections_style()) 
+
+
+        return frame
+
+      
         
-
-        if ret:
-            
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frameRGB = frame
-
-            cv2.putText(frame, f"FPS: {fps:.2f}", (video_feed_width_half, video_feed_height_minus_50), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
-
-            #start_time = timetime
-
-            results = self.hands.process(frameRGB)
-            
-            #end_time = timetime
-            #print(f"Execution time: {end_time - start_time} seconds")  
-
-            # If hands are present in image(frame) 
-            if results.multi_hand_landmarks: 
-                            
-                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-                
-                self.frame_timestamp_ms = int(round(timetime * 1000))
-                
-                if self.tkapp.gesture_recognition.get():
-                    gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
-                    
-                    if gesture_recognition_result is not None:
-                        #GestureRecognizerResult(gestures=[[Category(index=-1, score=0.552459716796875, display_name='', category_name='Open_Palm')]] get category name
-                        if len(gesture_recognition_result.gestures) > 0:
-                            category_name = gesture_recognition_result.gestures[0][0].category_name
-                            if category_name and category_name != "None":
-                                cv2.putText(frame, f"Gesture: {category_name}", (video_feed_width_half, video_feed_height_minus_100), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
-                            print(category_name)
-
-                            #Quick Chat mode
-                            if gesture_mode == 1:
-                                if category_name == "Thumb_Up" and self.Timeout_Thumb_Up < timetime:
-                                    keyboard.write("👍")
-                                    keyboard.press_and_release('enter')
-                                    self.Timeout_Thumb_Up = timetime + 1
-                                    
-                                if category_name == "Thumb_Down" and self.Timeout_Thumb_Up < timetime:
-                                    keyboard.write("👎")
-                                    keyboard.press_and_release('enter')
-                                    self.Timeout_Thumb_Up = timetime + 1
-                                    
-                            #Macro mode
-                            elif gesture_mode == 2:
-                                pass
-                            
-                            #Mouse Control mode
-                            elif gesture_mode == 3:
-                                coordinates_index_finger = (results.multi_hand_landmarks[0].landmark[8].x, results.multi_hand_landmarks[0].landmark[8].y)
-                                if threading.active_count() < 2:
-                                    tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*screenwidth*1.2, coordinates_index_finger[1]*screenheight*1.2, 0.0, 0.0, False))
-                                    tmousemove.start()
-                                    
-                                #When the palm is open, then display some sort of progress cirle around the hand and click when the circle is full it should be like a 1 second delay
-                                if category_name == "Open_Palm":
-                                    # Increase the counter
-                                    self.open_palm_counter += 1
-
-                                    # Reset the none counter
-                                    self.none_counter = 0
-
-                                    # Calculate the progress
-                                    progress = self.open_palm_counter / self.tkapp.fps
-
-                                    # Draw the circle
-                                    cv2.circle(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), 50, (0, 255, 0), 2)
-
-                                    # Draw the progress arc
-                                    cv2.ellipse(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), (50, 50), 0, 0, progress * 360, (0, 255, 0), 2)
-
-                                    # If the palm has been open for 1 second, trigger a click event
-                                    if self.open_palm_counter >= self.tkapp.fps:
-                                        pag.click()
-                                        self.open_palm_counter = 0
-                                
-                                
-                                elif category_name == "Thumb_Up" and self.TimeoutUpDown < timetime:
-                                    self.thumb_up_counter += 1
-                                    self.none_counter = 0
-                                    if self.thumb_up_counter >= self.tkapp.fps:
-                                        #press arrow up
-                                        keyboard.press_and_release('up')
-                                        self.thumb_up_counter = 0
-                                        self.TimeoutUpDown = timetime + 1
-                                    
-                                elif category_name == "Thumb_Down"and self.TimeoutUpDown < timetime:
-                                    self.thumb_down_counter += 1
-                                    self.none_counter = 0
-                                    if self.thumb_down_counter >= self.tkapp.fps:
-                                        #press arrow down
-                                        keyboard.press_and_release('down')
-                                        self.thumb_down_counter = 0
-                                        self.TimeoutUpDown = timetime + 1
-                                
-                                else:
-                                    # Increase the none counter
-                                    self.none_counter += 1
-                                    
-                                    # If there have been 3 consecutive none statements, reset the open palm counter
-                                    if self.none_counter >= self.tkapp.fps:
-                                        self.open_palm_counter = 0
-                                        self.none_counter = 0
-                                        self.thumb_up_counter = 0
-                                        self.thumb_down_counter = 0
-
-                            elif gesture_mode == 4:
-                                lines = []
-                                for hand_landmarks in results.multi_hand_landmarks:
-                                    coordinates6 = (hand_landmarks.landmark[6].x, hand_landmarks.landmark[6].y)
-                                    coordinates7 = (hand_landmarks.landmark[7].x, hand_landmarks.landmark[7].y)
-                                    coordinates8 = (hand_landmarks.landmark[8].x, hand_landmarks.landmark[8].y)
-
-                                    # Calculate slopes
-                                    slope1 = (coordinates7[1] - coordinates6[1]) / (coordinates7[0] - coordinates6[0]) if coordinates7[0] != coordinates6[0] else float('inf')
-                                    slope2 = (coordinates8[1] - coordinates7[1]) / (coordinates8[0] - coordinates7[0]) if coordinates8[0] != coordinates7[0] else float('inf')
-
-                                    if abs(slope1 - slope2) < 0.5:
-                                        # Calculate the direction of the line from coordinates7 to coordinates8
-                                        direction = (coordinates8[0] - coordinates7[0], coordinates8[1] - coordinates7[1])
-
-                                        # Normalize the direction
-                                        length = (direction[0]**2 + direction[1]**2)**0.5
-                                        direction = (direction[0]/length, direction[1]/length)
-
-                                        # Calculate the point on the border of the screen
-                                        border_point = (int(coordinates7[0]*video_feed_width + direction[0]*video_feed_width), int(coordinates7[1]*video_feed_height + direction[1]*video_feed_height))
-
-                                        # Draw the line from coordinates7 to coordinates8
-                                        cv2.line(frame, (int(coordinates7[0]*video_feed_width), int(coordinates7[1]*video_feed_height)), (int(coordinates8[0]*video_feed_width), int(coordinates8[1]*video_feed_height)), (0, 255, 0), 10)
-
-                                        # Draw the line from coordinates8 to the border of the screen
-                                        cv2.line(frame, (int(coordinates8[0]*video_feed_width), int(coordinates8[1]*video_feed_height)), border_point, (0, 255, 0), 10)
-                                        
-                                        lines.append(((int(coordinates7[0]*video_feed_width), int(coordinates7[1]*video_feed_height)), border_point))
-                                    
-                                # Check for intersections
-                                for i in range(len(lines)):
-                                    for j in range(i+1, len(lines)):
-                                        # Calculate intersection point
-                                        xdiff = (lines[i][0][0] - lines[i][1][0], lines[j][0][0] - lines[j][1][0])
-                                        ydiff = (lines[i][0][1] - lines[i][1][1], lines[j][0][1] - lines[j][1][1])
-
-                                        def det(a, b):
-                                            return a[0] * b[1] - a[1] * b[0]
-
-                                        div = det(xdiff, ydiff)
-                                        if div == 0:
-                                            continue
-
-                                        d = (det(*lines[i]), det(*lines[j]))
-                                        x = det(d, xdiff) / div
-                                        y = det(d, ydiff) / div
-
-                                        # Draw a circle at the intersection point
-                                        cv2.circle(frame, (int(x), int(y)), radius=40, color=(255, 0, 0), thickness=-1)
-                                    
-                            else:
-                                print("Error: Gesture Mode not found")
-                              
-                    
-                if skeleton_mode:
-                    for hand_landmarks in results.multi_hand_landmarks:
-                        self.mp_drawing.draw_landmarks(
-                            frame, hand_landmarks, self.mpHands.HAND_CONNECTIONS,
-                            self.mp_drawing_styles.get_default_hand_landmarks_style(),
-                            self.mp_drawing_styles.get_default_hand_connections_style()) 
-
-            return frame
-
-        else:
-            print("Error while reading frame")    
-            
 
 class ToplevelWindow(ctk.CTkToplevel):
     def __init__(self, tkapp, *args, **kwargs):
@@ -459,42 +455,38 @@ class Window(ctk.CTk):
   
         
     def video_feed(self):
-        
         image_label = ctk.CTkLabel(self, text="", width=self.tkinter_width, height=self.tkinter_height, bg_color="#ffffff")
-        #empty_image = Image.new('RGB', (self.tkinter_width, self.tkinter_height))
-        #ctkimage = ctk.CTkImage(empty_image, empty_image, size=(self.tkinter_width, self.tkinter_height))
         image_label.pack(side=tk.TOP)
         
         self.HandTracker = HandTracking(self)
-        
-        while self.running:
-            StartT = time.time()
-            #time.sleep(0.03)
-            frame = self.HandTracker.process_video()
-            
-            #Update the image to tkinter...
-            try:
-                img_update = Image.fromarray(frame, 'RGB')
+        try:
+            while self.running:
+                StartT = time.time()
                 
-                img_update = img_update.resize((self.tkinter_width, self.tkinter_height), Image.ANTIALIAS)
+                frame = self.HandTracker.process_video()
+                
+                print("Time needed: ", time.time()-StartT)
+                
+                # Resize the frame before converting it to an image
+                frame = cv2.resize(frame, (self.tkinter_width, self.tkinter_height), interpolation=cv2.INTER_NEAREST)
+                
+                # Convert the frame to an image
+                img_update = Image.fromarray(frame, 'RGB')
                 
                 ctkimage = ImageTk.PhotoImage(img_update)
                 
-    
                 image_label.configure(image=ctkimage)
                 image_label.update()
                 
-                 
-                
                 self.fps = 1/(time.time()-StartT)
                 
-            except RuntimeError:
-                print("Window was closed: RuntimeError") 
-                self.close_application()
-            
-            except AttributeError:
-                print("Window was closed: AttributeError")
-                self.close_application()
+        except RuntimeError:
+            print("Window was closed: RuntimeError") 
+            self.close_application()
+        
+        except AttributeError:
+            print("Window was closed: AttributeError")
+            self.close_application()
      
     
     def close_application(self):
@@ -537,9 +529,9 @@ class Window(ctk.CTk):
     def apply_settings_hotkeys(self):
 
         save_settigs = """
-        INSERT INTO settings (skeleton_mode, gesture_recognition, gesture_mode)
+        UPDATE settings
+        SET skeleton_mode = ?, gesture_recognition = ?, gesture_mode = ?
         WHERE id = 1
-        VALUES (?, ?, ?)
         """
         
         self.tkapp.c.execute(save_settigs, (self.skeleton_mode.get(),
@@ -553,5 +545,6 @@ tkapp = Window()
 
 
 if __name__ == "__main__":
+    cv2.ocl.setUseOpenCL(True)
     pag.FAILSAFE = False
     tkapp.mainloop()
