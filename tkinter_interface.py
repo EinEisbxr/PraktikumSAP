@@ -325,6 +325,9 @@ class ToplevelWindow(ctk.CTkToplevel):
         self.bind("<F3>", lambda event: self.tkapp.hotkey_functions("F3"))
         self.bind("<F4>", lambda event: self.tkapp.hotkey_functions("F4"))
         
+        self.bind("<m>", lambda event: self.tkapp.create_macro_window())
+        self.bind("<M>", lambda event: self.tkapp.create_macro_window())
+        
         self.create_widgets()
         
         
@@ -440,10 +443,7 @@ class MacroWindow(ctk.CTkToplevel):
         self.title("Macro settings")
 
         self.tkapp = tkapp
-        
-        self.bind("<s>", lambda event: self.tkapp.create_settings_window())
-        self.bind("<S>", lambda event: self.tkapp.create_settings_window())
-        
+
         self.bind("<q>", lambda event: self.tkapp.close_application())
         self.bind("<Q>", lambda event: self.tkapp.close_application())
         
@@ -471,7 +471,7 @@ class MacroWindow(ctk.CTkToplevel):
         self.Label_thumb_down = ctk.CTkLabel(self, text="Thumb Down")
         self.Label_thumb_down.pack(side=tk.TOP)
         self.Entry_thumb_down = ctk.CTkEntry(self, textvariable=self.tkapp.thumb_down)
-        self.Entry_thumb_down.pack(side=tk.TOP)
+        self.Entry_thumb_down.pack(side=tk.TOP) 
 
         self.Label_closed_fist = ctk.CTkLabel(self, text="Closed Fist")
         self.Label_closed_fist.pack(side=tk.TOP)
@@ -499,12 +499,12 @@ class MacroWindow(ctk.CTkToplevel):
 
     def apply_macros(self):
         #chick if there is an entry with the id 1
-        self.tkapp.c.execute("SELECT * FROM settings WHERE id = 1")
+        self.tkapp.c.execute("SELECT * FROM macro WHERE id = 1")
         settings = self.tkapp.c.fetchone()
         
         if settings is None:
             insert_settings = """
-            INSERT INTO settings (open_palm, thumb_up, thumb_down, closed_fist, pointing_up, victory, i_love_you)
+            INSERT INTO macro (open_palm, thumb_up, thumb_down, closed_fist, pointing_up, victory, i_love_you)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """
             
@@ -529,6 +529,8 @@ class MacroWindow(ctk.CTkToplevel):
                                                 self.tkapp.closed_fist.get(),
                                                 self.tkapp.pointing_up.get(),
                                                 self.tkapp.victory.get(),
+                                                
+                                                
                                                 self.tkapp.i_love_you.get()))
             
         self.tkapp.conn.commit()
@@ -569,6 +571,9 @@ class Window(ctk.CTk):
         
         self.bind("<q>", lambda event: self.close_application())
         self.bind("<Q>", lambda event: self.close_application())
+
+        self.bind("<m>", lambda event: self.create_macro_window())
+        self.bind("<M>", lambda event: self.create_macro_window())
         
         self.bind("<F1>", lambda event: self.hotkey_functions("F1"))
         self.bind("<F2>", lambda event: self.hotkey_functions("F2"))
@@ -650,9 +655,12 @@ class Window(ctk.CTk):
         if self.macro_window is None or not self.macro_window.winfo_exists():
             self.macro_window = MacroWindow(self)
             time.sleep(0.1)
+            self.macro_window.update()
+            self.macro_window.update_idletasks()
+            self.update()
+            self.update_idletasks()
             self.macro_window.lift()
             self.macro_window.focus()
-
         else:
             self.macro_window.lift()
             self.macro_window.focus()
@@ -681,6 +689,8 @@ class Window(ctk.CTk):
                 StartT = time.time()
                 
                 frame = self.HandTracker.process_video()
+                
+                
                             
                 # Resize the frame before converting it to an image
                 frame = cv2.resize(frame, (self.tkinter_width, self.tkinter_height), interpolation=cv2.INTER_NEAREST)
