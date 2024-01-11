@@ -82,12 +82,12 @@ class HandTracking():
 
             cv2.putText(frame, f"FPS: {fps:.2f}", (video_feed_width_half, video_feed_height_minus_50), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
 
-            start_time = timetime
+            #start_time = timetime
 
             results = self.hands.process(frameRGB)
             
-            end_time = timetime
-            print(f"Execution time: {end_time - start_time} seconds")  
+            #end_time = timetime
+            #print(f"Execution time: {end_time - start_time} seconds")  
 
             # If hands are present in image(frame) 
             if results.multi_hand_landmarks: 
@@ -127,7 +127,7 @@ class HandTracking():
                             elif gesture_mode == 3:
                                 coordinates_index_finger = (results.multi_hand_landmarks[0].landmark[8].x, results.multi_hand_landmarks[0].landmark[8].y)
                                 if threading.active_count() < 2:
-                                    tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*screenwidth*2, coordinates_index_finger[1]*screenheight, 0.0, 0.0, False))
+                                    tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*screenwidth*1.2, coordinates_index_finger[1]*screenheight*1.2, 0.0, 0.0, False))
                                     tmousemove.start()
                                     
                                 #When the palm is open, then display some sort of progress cirle around the hand and click when the circle is full it should be like a 1 second delay
@@ -260,6 +260,18 @@ class ToplevelWindow(ctk.CTkToplevel):
         #self.tk_setPalette(background='#ffffff', foreground='#0e1718',
         #       activeBackground='#ffffff', activeForeground='#0e1718')
         self.tkapp = tkapp
+        
+        self.bind("<s>", lambda event: self.tkapp.create_settings_window())
+        self.bind("<S>", lambda event: self.tkapp.create_settings_window())
+        
+        self.bind("<q>", lambda event: self.tkapp.close_application())
+        self.bind("<Q>", lambda event: self.tkapp.close_application())
+        
+        self.bind("<F1>", lambda event: self.tkapp.hotkey_functions("F1"))
+        self.bind("<F2>", lambda event: self.tkapp.hotkey_functions("F2"))
+        self.bind("<F3>", lambda event: self.tkapp.hotkey_functions("F3"))
+        self.bind("<F4>", lambda event: self.tkapp.hotkey_functions("F4"))
+        
         self.create_widgets()
         
         
@@ -326,8 +338,9 @@ class ToplevelWindow(ctk.CTkToplevel):
             max_num_hands=int(self.tkapp.max_num_hands.get()))
         
         save_settigs = """
-        INSERT INTO settings (detection_confidence, tracking_confidence, max_num_hands, model_complexity, skeleton_mode, cam_number, gesture_recognition, gesture_mode)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        UPDATE settings
+        SET detection_confidence = ?, tracking_confidence = ?, max_num_hands = ?, model_complexity = ?, skeleton_mode = ?, cam_number = ?, gesture_recognition = ?, gesture_mode = ?
+        WHERE id = 1
         """
         
         self.tkapp.c.execute(save_settigs, (self.tkapp.detection_confidence.get(),
@@ -525,6 +538,7 @@ class Window(ctk.CTk):
 
         save_settigs = """
         INSERT INTO settings (skeleton_mode, gesture_recognition, gesture_mode)
+        WHERE id = 1
         VALUES (?, ?, ?)
         """
         
@@ -539,4 +553,5 @@ tkapp = Window()
 
 
 if __name__ == "__main__":
+    pag.FAILSAFE = False
     tkapp.mainloop()
