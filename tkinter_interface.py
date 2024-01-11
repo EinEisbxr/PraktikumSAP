@@ -15,6 +15,7 @@ import sqlite3
 import keyboard
 import pyautogui as pag
 import threading
+import AppOpener
 
 
 global tkapp
@@ -45,6 +46,7 @@ class HandTracking():
         self.tkapp = tkapp
         self.Timeout_Thumb_Up = 0
         self.TimeoutUpDown = 0
+        self.Timeout_macro = 0
         
         self.open_palm_counter = 0
         self.none_counter = 0
@@ -73,10 +75,7 @@ class HandTracking():
         #flip the frame
         frame = cv2.flip(frame, 1)
         
-        
-
         if ret:
-            
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frameRGB = frame
 
@@ -85,7 +84,8 @@ class HandTracking():
             #start_time = timetime
 
             results = self.hands.process(frameRGB)
-            
+            self.results = results
+
             #end_time = timetime
             #print(f"Execution time: {end_time - start_time} seconds")  
 
@@ -98,7 +98,8 @@ class HandTracking():
                 
                 if self.tkapp.gesture_recognition.get():
                     gesture_recognition_result = self.recognizer.recognize_for_video(mp_image, self.frame_timestamp_ms)
-                    
+                    self.gesture_recognition_result = gesture_recognition_result
+
                     if gesture_recognition_result is not None:
                         #GestureRecognizerResult(gestures=[[Category(index=-1, score=0.552459716796875, display_name='', category_name='Open_Palm')]] get category name
                         if len(gesture_recognition_result.gestures) > 0:
@@ -248,7 +249,53 @@ class HandTracking():
 
         else:
             print("Error while reading frame")    
-            
+
+
+def macro_processing(self):
+    if self.Timeout_macro < time.time():
+        current_gesture = tkapp.gesture_recognition_result.gestures[0][0].category_name
+
+        if "Open_Palm" in current_gesture:
+            app_processing(self.tkapp.open_palm.get())
+            self.Timeout_macro = time.time() + 1
+
+        elif "Thumb_Up" in current_gesture:
+            app_processing(self.tkapp.thumb_up.get())
+            self.Timeout_macro = time.time() + 1
+
+        elif "Thumb_Down" in current_gesture:
+            app_processing(self.tkapp.thumb_down.get())
+            self.Timeout_macro = time.time() + 1
+
+        elif "Closed_Fist" in current_gesture:
+            app_processing(self.tkapp.closed_fist.get())
+            self.Timeout_macro = time.time() + 1
+
+        elif "Pointing_Up" in current_gesture:
+            app_processing(self.tkapp.pointing_up.get())
+            self.Timeout_macro = time.time() + 1
+
+        elif "Victory" in current_gesture:
+            app_processing(self.tkapp.victory.get())
+            self.Timeout_macro = time.time() + 1
+
+        elif "I_Love_You" in current_gesture:
+            app_processing(self.tkapp.i_love_you.get())
+            self.Timeout_macro = time.time() + 1
+
+
+def app_processing(self, command=""):
+    if "open" in command:
+        app_to_open = command.split("open ")[1]
+        AppOpener.open(app_to_open, output=False, match_closest=True)
+        print(f"Opening {app_to_open}")
+
+    if "close" in command:
+        app_to_close = command.split("close ")[1]
+        AppOpener.close(app_to_close, output=False, match_closest=True)
+        print(f"Closing {app_to_close}")
+
+
 
 class ToplevelWindow(ctk.CTkToplevel):
     def __init__(self, tkapp, *args, **kwargs):
@@ -358,6 +405,88 @@ class ToplevelWindow(ctk.CTkToplevel):
         self.tkapp.conn.commit()
 
 
+class MacroWindow(ctk.CTkToplevel):
+    def __init__(self, tkapp, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("400x600")
+        self.title("Macro settings")
+
+        self.tkapp = tkapp
+        
+        self.bind("<s>", lambda event: self.tkapp.create_settings_window())
+        self.bind("<S>", lambda event: self.tkapp.create_settings_window())
+        
+        self.bind("<q>", lambda event: self.tkapp.close_application())
+        self.bind("<Q>", lambda event: self.tkapp.close_application())
+        
+        self.bind("<F1>", lambda event: self.tkapp.hotkey_functions("F1"))
+        self.bind("<F2>", lambda event: self.tkapp.hotkey_functions("F2"))
+        self.bind("<F3>", lambda event: self.tkapp.hotkey_functions("F3"))
+        self.bind("<F4>", lambda event: self.tkapp.hotkey_functions("F4"))
+
+        self.bind("<Return>", lambda event: self.apply_macros())
+        
+        self.create_widgets()
+        
+
+    def create_widgets(self):
+        self.Label_open_palm = ctk.CTkLabel(self, text="Open Palm")
+        self.Label_open_palm.pack(side=tk.TOP)
+        self.Entry_open_palm = ctk.CTkEntry(self, textvariable=self.tkapp.open_palm)
+        self.Entry_open_palm.pack(side=tk.TOP)
+
+        self.Label_thumb_up = ctk.CTkLabel(self, text="Thumb Up")
+        self.Label_thumb_up.pack(side=tk.TOP)
+        self.Entry_thumb_up = ctk.CTkEntry(self, textvariable=self.tkapp.thumb_up)
+        self.Entry_thumb_up.pack(side=tk.TOP)
+
+        self.Label_thumb_down = ctk.CTkLabel(self, text="Thumb Down")
+        self.Label_thumb_down.pack(side=tk.TOP)
+        self.Entry_thumb_down = ctk.CTkEntry(self, textvariable=self.tkapp.thumb_down)
+        self.Entry_thumb_down.pack(side=tk.TOP)
+
+        self.Label_closed_fist = ctk.CTkLabel(self, text="Closed Fist")
+        self.Label_closed_fist.pack(side=tk.TOP)
+        self.Entry_closed_fist = ctk.CTkEntry(self, textvariable=self.tkapp.closed_fist)
+        self.Entry_closed_fist.pack(side=tk.TOP)
+
+        self.Label_pointing_up = ctk.CTkLabel(self, text="Pointing Up")
+        self.Label_pointing_up.pack(side=tk.TOP)
+        self.Entry_pointing_up = ctk.CTkEntry(self, textvariable=self.tkapp.pointing_up)
+        self.Entry_pointing_up.pack(side=tk.TOP)
+
+        self.Label_victory = ctk.CTkLabel(self, text="Victory")
+        self.Label_victory.pack(side=tk.TOP)
+        self.Entry_victory = ctk.CTkEntry(self, textvariable=self.tkapp.victory)
+        self.Entry_victory.pack(side=tk.TOP)
+
+        self.Label_i_love_you = ctk.CTkLabel(self, text="I Love You")
+        self.Label_i_love_you.pack(side=tk.TOP)
+        self.Entry_i_love_you = ctk.CTkEntry(self, textvariable=self.tkapp.i_love_you)
+        self.Entry_i_love_you.pack(side=tk.TOP)
+
+        self.Apply_Button = ctk.CTkButton(self, text="Apply", command=self.apply_macros)
+        self.Apply_Button.pack(side=tk.TOP)
+
+
+    def apply_macros(self):
+        save_macros = """
+        UPDATE macro
+        SET open_palm = ?, thumb_up = ?, thumb_down = ?, closed_fist = ?, pointing_up = ?, victory = ?, i_love_you = ?
+        WHERE id = 1
+        """
+        
+        self.tkapp.c.execute(save_macros, (self.tkapp.open_palm.get(),
+                                            self.tkapp.thumb_up.get(),
+                                            self.tkapp.thumb_down.get(),
+                                            self.tkapp.closed_fist.get(),
+                                            self.tkapp.pointing_up.get(),
+                                            self.tkapp.victory.get(),
+                                            self.tkapp.i_love_you.get()))
+        
+        self.tkapp.conn.commit()
+
+
 class Window(ctk.CTk):  
     def __init__(self):
         super().__init__()
@@ -431,6 +560,27 @@ class Window(ctk.CTk):
             self.gesture_recognition.set(settings[7])
             self.gesture_mode.set(settings[8])
         
+        self.c.execute("SELECT * FROM macro ORDER BY id DESC LIMIT 1")
+        macros = self.c.fetchone()
+
+        self.open_palm = tk.StringVar(value="")
+        self.thumb_up = tk.StringVar(value="")
+        self.thumb_down = tk.StringVar(value="")
+        self.closed_fist = tk.StringVar(value="")
+        self.pointing_up = tk.StringVar(value="")
+        self.victory = tk.StringVar(value="")
+        self.i_love_you = tk.StringVar(value="")
+
+        if macros is not None:
+            self.open_palm.set(macros[1])
+            self.thumb_up.set(macros[2])
+            self.thumb_down.set(macros[3])
+            self.closed_fist.set(macros[4])
+            self.pointing_up.set(macros[5])
+            self.victory.set(macros[6])
+            self.i_love_you.set(macros[7])
+
+
     # create settings window when settings button was pressed 
     def create_settings_window(self):
         if self.toplevel_window is None or not self.toplevel_window.winfo_exists():
@@ -442,16 +592,31 @@ class Window(ctk.CTk):
             self.update_idletasks()
             self.toplevel_window.lift()
             self.toplevel_window.focus()
+
         else:
+            self.toplevel_window.lift()
             self.toplevel_window.focus()  # if window exists focus it
 
+
+    def create_macro_window(self):
+        if self.macro_window is None or not self.macro_window.winfo_exists():
+            self.macro_window = MacroWindow(self)
+            time.sleep(0.1)
+            self.macro_window.lift()
+            self.macro_window.focus()
+
+        else:
+            self.macro_window.lift()
+            self.macro_window.focus()
             
+
     def create_navigation_bar(self):
         menu = tk.Menu(self)
         
         file_menu = tk.Menu()
         menu.add_cascade(label="File", menu=file_menu, foreground="#ffffff", background="#3D3D3D")
         file_menu.add_command(label="Settings", command=self.create_settings_window, foreground="#ffffff", background="#3D3D3D")
+        file_menu.add_command(label="Macro", command=self.create_macro_window, foreground="#ffffff", background="#3D3D3D")
         file_menu.add_command(label="Exit", command=self.destroy, foreground="#ffffff", background="#3D3D3D")
         
         
@@ -517,6 +682,18 @@ class Window(ctk.CTk):
                         gesture_recognition BOOLEAN DEFAULT FALSE,
                         gesture_mode TEXT DEFAULT 1
                         )""")
+        
+        self.c.execute("""CREATE TABLE IF NOT EXISTS macro (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        open_palm TEXT DEFAULT "",
+                        thumb_up TEXT DEFAULT "",
+                        thumb_down TEXT DEFAULT "",
+                        closed_fist TEXT DEFAULT "",
+                        pointing_up TEXT DEFAULT "",
+                        victory TEXT DEFAULT "",
+                        i_love_you TEXT DEFAULT "",
+                        )""")
+        
         self.conn.commit()
 
     def hotkey_functions(self, hotkey):
@@ -549,7 +726,6 @@ class Window(ctk.CTk):
         self.tkapp.conn.commit()
         
 tkapp = Window()
-
 
 
 if __name__ == "__main__":
