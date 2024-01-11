@@ -54,9 +54,7 @@ class HandTracking():
         self.thumb_down_counter = 0
         
     def process_video(self):
-        
-        
-        
+
         video_feed_width = self.tkapp.video_feed_width 
         video_feed_width_half = int(video_feed_width / 2) 
         video_feed_height = self.tkapp.video_feed_height 
@@ -125,7 +123,7 @@ class HandTracking():
                             
                     #Macro mode
                     elif gesture_mode == 2:
-                        pass
+                        self.macro_processing()
                     
                     #Mouse Control mode
                     elif gesture_mode == 3:
@@ -250,97 +248,52 @@ class HandTracking():
 
         return frame
 
-          
             
-def macro_processing(self):
-    if self.Timeout_macro < time.time():
-        current_gesture = tkapp.gesture_recognition_result.gestures[0][0].category_name
+    def macro_processing(self):
+        if self.Timeout_macro < time.time():
+            current_gesture = self.gesture_recognition_result.gestures[0][0].category_name
 
-        if "Open_Palm" in current_gesture:
-            app_processing(self.tkapp.open_palm.get())
-            self.Timeout_macro = time.time() + 1
+            if "Open_Palm" in current_gesture:
+                self.app_processing(self.tkapp.open_palm.get())
+                self.Timeout_macro = time.time() + 1
+                print(self.tkapp.open_palm.get())
 
-        elif "Thumb_Up" in current_gesture:
-            app_processing(self.tkapp.thumb_up.get())
-            self.Timeout_macro = time.time() + 1
+            elif "Thumb_Up" in current_gesture:
+                self.app_processing(self.tkapp.thumb_up.get())
+                self.Timeout_macro = time.time() + 1
 
-        elif "Thumb_Down" in current_gesture:
-            app_processing(self.tkapp.thumb_down.get())
-            self.Timeout_macro = time.time() + 1
+            elif "Thumb_Down" in current_gesture:
+                self.app_processing(self.tkapp.thumb_down.get())
+                self.Timeout_macro = time.time() + 1
 
-        elif "Closed_Fist" in current_gesture:
-            app_processing(self.tkapp.closed_fist.get())
-            self.Timeout_macro = time.time() + 1
+            elif "Closed_Fist" in current_gesture:
+                self.app_processing(self.tkapp.closed_fist.get())
+                self.Timeout_macro = time.time() + 1
 
-        elif "Pointing_Up" in current_gesture:
-            app_processing(self.tkapp.pointing_up.get())
-            self.Timeout_macro = time.time() + 1
+            elif "Pointing_Up" in current_gesture:
+                self.app_processing(self.tkapp.pointing_up.get())
+                self.Timeout_macro = time.time() + 1
 
-        elif "Victory" in current_gesture:
-            app_processing(self.tkapp.victory.get())
-            self.Timeout_macro = time.time() + 1
+            elif "Victory" in current_gesture:
+                self.app_processing(self.tkapp.victory.get())
+                self.Timeout_macro = time.time() + 1
 
-        elif "I_Love_You" in current_gesture:
-            app_processing(self.tkapp.i_love_you.get())
-            self.Timeout_macro = time.time() + 1
-
-
-def app_processing(self, command=""):
-    if "open" in command:
-        app_to_open = command.split("open ")[1]
-        AppOpener.open(app_to_open, output=False, match_closest=True)
-        print(f"Opening {app_to_open}")
-
-    if "close" in command:
-        app_to_close = command.split("close ")[1]
-        AppOpener.close(app_to_close, output=False, match_closest=True)
-        print(f"Closing {app_to_close}")
+            elif "I_Love_You" in current_gesture:
+                self.app_processing(self.tkapp.i_love_you.get())
+                self.Timeout_macro = time.time() + 1
 
 
+    def app_processing(self, command=""):
+        if "open" in command:
+            app_to_open = command.split("open ")[1]
+            AppOpener.open(app_to_open, output=False, match_closest=True)
+            print(f"Opening {app_to_open}")
 
-def macro_processing(self):
-    if self.Timeout_macro < time.time():
-        current_gesture = tkapp.gesture_recognition_result.gestures[0][0].category_name
+        if "close" in command:
+            app_to_close = command.split("close ")[1]
+            AppOpener.close(app_to_close, output=False, match_closest=True)
+            print(f"Closing {app_to_close}")
 
-        if "Open_Palm" in current_gesture:
-            app_processing(self.tkapp.open_palm.get())
-            self.Timeout_macro = time.time() + 1
-
-        elif "Thumb_Up" in current_gesture:
-            app_processing(self.tkapp.thumb_up.get())
-            self.Timeout_macro = time.time() + 1
-
-        elif "Thumb_Down" in current_gesture:
-            app_processing(self.tkapp.thumb_down.get())
-            self.Timeout_macro = time.time() + 1
-
-        elif "Closed_Fist" in current_gesture:
-            app_processing(self.tkapp.closed_fist.get())
-            self.Timeout_macro = time.time() + 1
-
-        elif "Pointing_Up" in current_gesture:
-            app_processing(self.tkapp.pointing_up.get())
-            self.Timeout_macro = time.time() + 1
-
-        elif "Victory" in current_gesture:
-            app_processing(self.tkapp.victory.get())
-            self.Timeout_macro = time.time() + 1
-
-        elif "I_Love_You" in current_gesture:
-            app_processing(self.tkapp.i_love_you.get())
-            self.Timeout_macro = time.time() + 1
-
-
-def app_processing(self, command=""):
-    if "open" in command:
-        app_to_open = command.split("open ")[1]
-        AppOpener.open(app_to_open, output=False, match_closest=True)
-        print(f"Opening {app_to_open}")
-
-    if "close" in command:
-        app_to_close = command.split("close ")[1]
-        AppOpener.close(app_to_close, output=False, match_closest=True)
-        print(f"Closing {app_to_close}")
 
 
 
@@ -543,6 +496,7 @@ class Window(ctk.CTk):
         self.screenwidth = self.winfo_screenwidth()
 
         self.toplevel_window = None
+        self.macro_window = None
         self.fps = -1
         self.running = True
         
@@ -734,7 +688,7 @@ class Window(ctk.CTk):
                         closed_fist TEXT DEFAULT "",
                         pointing_up TEXT DEFAULT "",
                         victory TEXT DEFAULT "",
-                        i_love_you TEXT DEFAULT "",
+                        i_love_you TEXT DEFAULT ""
                         )""")
         
         self.conn.commit()
