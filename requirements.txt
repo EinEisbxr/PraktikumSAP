@@ -7,4 +7,4 @@ opencv_python==4.8.1.78
 Pillow==9.5.0
 protobuf==3.20.3
 PyAutoGUI==0.9.54
-AppOpener==1.6.0
+AppOpener==1.7.0
