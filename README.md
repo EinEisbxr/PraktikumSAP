@@ -15,6 +15,14 @@ using AI recognition to detect hands, gestrues, objects and faces. We use it to 
 
 2. Thumbs down: if you show a thumbs down in your camera it writes the emoji "👎" and presses "Enter"
 
+
+### Macros
+Open the Macro menu to specify a command and an app it should happen with.
+Possible commands:
+
+1. Open: open the specified application
+2. Close: close the specified application
+
 ### Mouse control
 This mode lets you control your mouse with your hand. The mouse cursor follows the tip of your index finger across your screen size.
 
