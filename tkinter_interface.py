@@ -21,10 +21,12 @@ import AppOpener
 global tkapp
 
 
+
 class HandTracking():
     def __init__(self, tkapp) -> None:
         self.cap = cv2.VideoCapture(int(tkapp.cam_number.get()))
         
+        #initializing the mediapipe
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
         
@@ -43,6 +45,7 @@ class HandTracking():
             min_tracking_confidence=float(tkapp.tracking_confidence.get()),
             max_num_hands=int(tkapp.max_num_hands.get()))
         
+        #Initializing the variables
         self.tkapp = tkapp
         self.Timeout_Thumb_Up = 0
         self.TimeoutUpDown = 0
@@ -52,9 +55,11 @@ class HandTracking():
         self.none_counter = 0
         self.thumb_up_counter = 0
         self.thumb_down_counter = 0
+    
         
     def process_video(self):
 
+        #calculate the variables
         video_feed_width = self.tkapp.video_feed_width 
         video_feed_width_half = int(video_feed_width / 2) 
         video_feed_height = self.tkapp.video_feed_height 
@@ -74,13 +79,10 @@ class HandTracking():
         frame = cv2.resize(frame, (video_feed_width, video_feed_height))
         frame = cv2.flip(frame, 1)
           
-
         if not ret:
-            
             print("Error: No video feed")
             return
         
-            
         frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = frameRGB
 
@@ -89,12 +91,8 @@ class HandTracking():
         results = self.hands.process(frameRGB)
         self.results = results
 
-        #end_time = timetime
-        #print(f"Execution time: {end_time - start_time} seconds")  
-
         # If hands are present in image(frame) 
-        if results.multi_hand_landmarks: 
-                        
+        if results.multi_hand_landmarks:    
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
             
             self.frame_timestamp_ms = int(round(timetime * 1000))
@@ -105,9 +103,9 @@ class HandTracking():
                 
                 if gesture_recognition_result is not None and len(gesture_recognition_result.gestures) > 0:
                     category_name = gesture_recognition_result.gestures[0][0].category_name
+                    
                     if category_name and category_name != "None":
                         cv2.putText(frame, f"Gesture: {category_name}", (video_feed_width_half, video_feed_height_minus_100), cv2.FONT_HERSHEY_COMPLEX, 0.9, (0, 255, 0), 2)
-                    print(category_name)
 
                     #Quick Chat mode
                     if gesture_mode == 1:
@@ -132,7 +130,6 @@ class HandTracking():
                             tmousemove = threading.Thread(target=pag.moveTo, args=(coordinates_index_finger[0]*screenwidth*1.2, coordinates_index_finger[1]*screenheight*1.2, 0.0, 0.0, False))
                             tmousemove.start()
                             
-                        #When the palm is open, then display some sort of progress cirle around the hand and click when the circle is full it should be like a 1 second delay
                         if category_name == "Open_Palm":
                             # Increase the counter
                             self.open_palm_counter += 1
@@ -147,7 +144,7 @@ class HandTracking():
                             cv2.circle(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), 50, (0, 255, 0), 2)
 
                             # Draw the progress arc
-                            cv2.ellipse(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), (50, 50), 0, 0, progress * 360, (0, 255, 0), 2)
+                            cv2.ellipse(frame, (int(self.tkapp.video_feed_width/2), int(self.tkapp.video_feed_height/2)), (50, 50), 0, 0, progress*360, (0, 255, 0), 10)
 
                             # If the palm has been open for 1 second, trigger a click event
                             if self.open_palm_counter >= self.tkapp.fps:
@@ -183,6 +180,7 @@ class HandTracking():
                                 self.thumb_up_counter = 0
                                 self.thumb_down_counter = 0
 
+                    #Laser Pointer mode
                     elif gesture_mode == 4:
                         lines = []
                         for hand_landmarks in results.multi_hand_landmarks:
@@ -234,6 +232,7 @@ class HandTracking():
                                 # Draw a circle at the intersection point
                                 cv2.circle(frame, (int(x), int(y)), radius=40, color=(255, 0, 0), thickness=-1)
                             
+                    #Error
                     else:
                         print("Error: Gesture Mode not found")
 
@@ -299,7 +298,6 @@ class HandTracking():
             app_to_open = command
             AppOpener.open(app_to_open, output=False, match_closest=True)
             print(f"Opening {app_to_open}")
-
 
 
 
@@ -431,10 +429,20 @@ class ToplevelWindow(ctk.CTkToplevel):
                                                 self.tkapp.gesture_mode.get()))
         
         self.tkapp.HandTracker.cap.release()
-        self.tkapp.HandTracker.cap = cv2.VideoCapture(int(self.tkapp.cam_number.get()))
+        
+        
+        #cv2.VideoCapture(int(self.tkapp.cam_number.get())) is extremly slow so i put it in a thread
+        self.change_camera(self.tkapp.cam_number.get())
         
         self.tkapp.conn.commit()
 
+    def change_camera(self, cam_number):
+        temp = cv2.VideoCapture(int(cam_number))
+        
+        if self.tkapp.HandTracker.cap != temp:
+            self.tkapp.HandTracker.cap.release()
+            self.tkapp.HandTracker.cap = temp
+        
 
 class MacroWindow(ctk.CTkToplevel):
     def __init__(self, tkapp, *args, **kwargs):
@@ -534,6 +542,7 @@ class MacroWindow(ctk.CTkToplevel):
                                                 self.tkapp.i_love_you.get()))
             
         self.tkapp.conn.commit()
+
 
 
 class Window(ctk.CTk):  
@@ -793,8 +802,9 @@ class Window(ctk.CTk):
         
         self.conn.commit()
         
+    
+       
 tkapp = Window()
-
 
 if __name__ == "__main__":
     cv2.ocl.setUseOpenCL(True)
