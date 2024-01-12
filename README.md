@@ -1,22 +1,24 @@
 # PraktikumSAP
 
 ## A repository for our internship at SAP St. Ingbert
+
 While our internship at SAP, we developed a programm that tracks your hand and gestures. With gestures for example you can print emojis. You can also see the skeleton overlayed on your hand and have a laser pointer.
 
-
 ## How does it work?
+
 We are using a python package called "MediaPipe". It was developed by google and is
 using AI recognition to detect hands, gestrues, objects and faces. We use it to detect your hand and which gestures you do. We then display it in a tkinter window which also manages the settings window.
 
-
 ## Available Gestures
-### Quick chatting using emojis 
+
+### Quick chatting using emojis
+
 1. Thumbs up: if you show a thumbs up in your camera it writes the emoji "👍" and presses "Enter"
 
 2. Thumbs down: if you show a thumbs down in your camera it writes the emoji "👎" and presses "Enter"
 
-
 ### Macros
+
 Open the Macro menu to specify a command and an app it should happen with.
 Possible commands:
 
@@ -24,6 +26,7 @@ Possible commands:
 2. Close: close the specified application
 
 ### Mouse control
+
 This mode lets you control your mouse with your hand. The mouse cursor follows the tip of your index finger across your screen size.
 
 * Move your mouse: Point up with your index finger and move your hand
@@ -31,11 +34,13 @@ This mode lets you control your mouse with your hand. The mouse cursor follows t
 * Left click: Open your hand
 
 ### Laser pointer
+
 Show a laser pointer starting from the tip of your index finger that reaches the border of the screen
 
-
 ## Settings
+
 ### Entries
+
 1. Detection Confidence: How sure the tracking needs to be to detect a hand.
     * Value range: 0 - 1
     * Value type: float
@@ -58,6 +63,7 @@ Show a laser pointer starting from the tip of your index finger that reaches the
    * Value type: float
 
 ### Checkboxes
+
 1. Toggle skeleton mode:
    * On: Overlay the tracked skeleton over your hand
    * Off: Don't show the skeleton
@@ -74,21 +80,24 @@ Show a laser pointer starting from the tip of your index finger that reaches the
 
 ### Don't forget to apply your settings using the "Apply" button or the "Enter" key on your keyboard
 
-
 ## Hotkeys
+
 ### While in main window
+
 * Open / Focus settings window: "**S**"
 
 * Open / Focus macro window: "**M**"
 
 ### While in settings or macro window
+
 * Apply settings: "**Enter**"
 
 ### In all windows possible
+
 * Stop everything: "**Q**"
 
-* Toggle skeleton mode: "**F1**" 
+* Toggle skeleton mode: "**F1**"
 
 * Toggle gesture recognition: "**F2**"
-    * Switch to next gesture mode: "**F3**"
-    * Switch to previous gesture mode: "**F4**"
+    1. Switch to next gesture mode: "**F3**"
+    2. Switch to previous gesture mode: "**F4**"
